@@ -1,0 +1,11 @@
+/* - app
+  - hooks
+  - utils
+    - databaseConnection.d.ts
+  - cryolipolisi
+    - page.tsx
+  - page.tsx
+    - signin.tsx
+    - signup.tsx
+  - components
+    - AuthForm.tsx */
