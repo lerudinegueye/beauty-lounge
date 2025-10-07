@@ -147,3 +147,24 @@ export async function sendBookingAdminNotificationEmail(adminEmail: string, book
     console.error('Error sending admin booking notification email:', error);
   }
 }
+
+export async function sendPasswordResetEmail(to: string, token: string) {
+  const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to,
+      subject: 'Réinitialisez votre mot de passe',
+      html: `
+        <h1>Réinitialisation de votre mot de passe</h1>
+        <p>Veuillez cliquer sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
+        <a href="${resetLink}">${resetLink}</a>
+        <p>Ce lien expirera dans une heure.</p>
+      `,
+    });
+    console.log('E-mail de réinitialisation de mot de passe envoyé avec succès à :', to);
+  } catch (error) {
+    console.error("Erreur l'envoi de l'e-mail de réinitialisation de mot de passe :", error);
+  }
+}

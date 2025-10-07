@@ -108,6 +108,38 @@ export async function createVerificationToken(userId: number, token: string) {
     }
 }
 
+export async function createPasswordResetToken(userId: number, token: string) {
+    const expires_at = new Date(Date.now() + 3600 * 1000); // 1 ora da adesso
+    let conn: Connection | null = null;
+    try {
+        conn = await createDatabaseConnection();
+        // Inizia eliminando i token esistenti per questo utente
+        await new Promise<void>((resolve, reject) => {
+            conn!.query('DELETE FROM password_resets WHERE user_id = ?', [userId], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
+        });
+
+        // Inserisci il nuovo token
+        return await new Promise((resolve, reject) => {
+            conn!.query(
+                'INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
+                [userId, token, expires_at],
+                (error, results) => {
+                    if (error) return reject(error);
+                    resolve(results.insertId);
+                }
+            );
+        });
+    } catch (error) {
+        console.error('Errore durante la creazione del token di reset password:', error);
+        throw error;
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
 export async function getVerificationToken(token: string): Promise<VerificationToken | undefined> {
   let conn: Connection | null = null;
   try {
@@ -155,6 +187,63 @@ export async function verifyUser(userId: number) {
   } catch (error) {
     console.error('Database query failed:', error);
     // We don't re-throw here to avoid crashing the server on db errors.
+  } finally {
+    if (conn) conn.end();
+  }
+}
+
+// Aggiungi queste funzioni, preferibilmente dopo la funzione createPasswordResetToken
+// o comunque insieme alle altre funzioni esportate.
+
+export async function getPasswordResetToken(token: string): Promise<{ user_id: number; expires_at: string } | undefined> {
+  let conn: Connection | null = null;
+  try {
+    conn = await createDatabaseConnection();
+    return await new Promise((resolve, reject) => {
+      conn!.query('SELECT * FROM password_resets WHERE token = ?', [token], (error, results) => {
+        if (error) return reject(error);
+        resolve(results[0]);
+      });
+    });
+  } catch (error) {
+    console.error('Error getting password reset token:', error);
+    throw error;
+  } finally {
+    if (conn) conn.end();
+  }
+}
+
+export async function updateUserPassword(userId: number, password: string): Promise<void> {
+  let conn: Connection | null = null;
+  try {
+    conn = await createDatabaseConnection();
+    return await new Promise((resolve, reject) => {
+      conn!.query('UPDATE users SET password = ? WHERE id = ?', [password, userId], (error) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('Error updating user password:', error);
+    throw error;
+  } finally {
+    if (conn) conn.end();
+  }
+}
+
+export async function deletePasswordResetToken(token: string): Promise<void> {
+  let conn: Connection | null = null;
+  try {
+    conn = await createDatabaseConnection();
+    return await new Promise((resolve, reject) => {
+      conn!.query('DELETE FROM password_resets WHERE token = ?', [token], (error) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('Error deleting password reset token:', error);
+    throw error;
   } finally {
     if (conn) conn.end();
   }

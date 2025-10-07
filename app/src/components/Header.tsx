@@ -76,10 +76,10 @@ const Header = () => {
             </div>
           ) : (
             <div className="flex items-center space-x-4">
-              <Link href="/signin" className="text-gray-600 hover:text-gray-900">
+              <Link href="/signin" className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-2 px-4 rounded-lg hover:from-pink-600 hover:to-orange-500 transition-all duration-300 ease-in-out">
                 Login
               </Link>
-              <Link href="/signup" className="text-gray-600 hover:text-gray-900">
+              <Link href="/signup" className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-2 px-4 rounded-lg hover:from-pink-600 hover:to-orange-500 transition-all duration-300 ease-in-out">
                 Sign Up
               </Link>
             </div>

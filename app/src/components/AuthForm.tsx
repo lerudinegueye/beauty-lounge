@@ -137,12 +137,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         </div>
         <button
           type="submit"
-          className="w-full px-4 py-3 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-400 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out"
+          className="w-full px-4 py-3 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-400 rounded-lg hover:from-pink-600 hover:to-orange-500 transition-all duration-300 ease-in-out"
         >
           {type === 'signin' ? 'Accedi' : 'Crea Account'}
         </button>
       </form>
-      <div className="pt-4 border-t border-gray-200">
+      <div className="pt-4 text-center">
         {switchLink}
       </div>
     </div>
