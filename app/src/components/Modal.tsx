@@ -8,9 +8,19 @@ interface ModalProps {
   onConfirm?: () => void;
   title: string;
   children: ReactNode;
+  confirmText?: string;
+  cancelText?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onConfirm, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  children,
+  confirmText = 'Confirmer',
+  cancelText = 'Annuler'
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -24,14 +34,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onConfirm, title, childr
               onClick={onClose}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
             >
-              Annuler
+              {cancelText}
             </button>
           )}
           <button
             onClick={onConfirm || onClose}
             className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
           >
-            {onConfirm ? 'Confirmer' : 'OK'}
+            {onConfirm ? confirmText : 'OK'}
           </button>
         </div>
       </div>

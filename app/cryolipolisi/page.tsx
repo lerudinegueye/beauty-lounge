@@ -1,4 +1,4 @@
-import { CryolipolisiCards } from './CryolipolisiCards';
+import CryolipolisiCards from './CryolipolisiCards';
 import React from 'react';
 import { getCards } from '../utils/data';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ export default async function CryolipolisiPage() {
           Nos Traitements Cryolipolisi
         </h1>
         {cards.length > 0 ? (
-          <CryolipolisiCards cards={cards} />
+          <CryolipolisiCards />
         ) : (
           <p className="text-center text-gray-500">
             Aucun service disponible pour le moment.

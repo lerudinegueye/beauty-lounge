@@ -29,9 +29,11 @@ export async function POST(req: NextRequest) {
     const currency = (session.currency || '').toLowerCase() === 'xof' ? 'CFA' : session.currency;
 
     const orderDetails = {
+        customer_name: session.metadata?.customer_name || 'N/A',
         customer_email: session.customer_email,
         amount_total: session.amount_total,
         currency: currency,
+        order_date: new Date(),
       };
 
     // 1. Invia l'email di conferma al cliente

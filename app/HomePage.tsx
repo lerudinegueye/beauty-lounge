@@ -29,11 +29,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (success) {
-      setModalContent({ title: "Pagamento Riuscito", message: "Il tuo pagamento è avvenuto con successo!" });
+      setModalContent({ title: "Paiement Réussi", message: "Votre paiement a été effectué avec succès !" });
       clearCart();
     }
     if (canceled) {
-      setModalContent({ title: "Pagamento Annullato", message: "Il pagamento è stato annullato." });
+      setModalContent({ title: "Paiement Annulé", message: "Le paiement a été annulé." });
     }
   }, [success, canceled, clearCart, setModalContent]);
 

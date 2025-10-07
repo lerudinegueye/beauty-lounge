@@ -8,9 +8,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   const { cart, user } = await req.json();
-  const origin = req.nextUrl.origin; // <-- MODO CORRETTO PER OTTENERE L'ORIGINE
-
-  console.log("Dati ricevuti nella richiesta di checkout:", { cart, user });
 
   const lineItems = cart.map((item: any) => ({
     price_data: {
@@ -18,7 +15,7 @@ export async function POST(req: NextRequest) {
       product_data: {
         name: item.title,
       },
-      unit_amount: item.price * 100,
+      unit_amount: item.price,
     },
     quantity: item.quantity,
   }));
@@ -28,16 +25,15 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      // --- URL DI REDIRECT CORRETTI ---
-      success_url: `${origin}/?success=true`,
-      cancel_url: `${origin}/cart`,
+      success_url: `http://localhost:3000/payment-success`,
+      cancel_url: `http://localhost:3000/cart`,
+      metadata: {
+        customer_name: user?.name || 'N/A',
+      }
     };
 
     if (user && user.email) {
       sessionParams.customer_email = user.email;
-      console.log(`Email cliente (${user.email}) passata a Stripe.`);
-    } else {
-      console.log("Nessun utente loggato, procedo senza email cliente.");
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
