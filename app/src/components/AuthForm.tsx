@@ -31,25 +31,24 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name: username }),
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        throw new Error(data.message || 'Une erreur est survenue');
       }
 
       if (variant === 'SIGNUP') {
-        setMessage('Registration successful! Please check your email to verify your account.');
-      } else {
-        if (data.token) {
-          login(data.token);
-          // router.push(callbackUrl || '/'); // Sostituito per evitare race condition
-          window.location.href = callbackUrl || '/';
-        } else {
-          throw new Error('Token not found in response');
-        }
+        setMessage('Inscription réussie ! Veuillez vérifier votre e-mail pour activer votre compte.');
+      } else { // This is for signin
+        login(); // Call login without token, AuthContext will fetch user
+        window.location.href = callbackUrl || '/';
       }
     } catch (err: any) {
       setError(err.message);
@@ -58,16 +57,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
 
   const switchLink = type === 'signin' ? (
     <p className="text-sm text-center text-gray-600">
-      Non hai un account?{' '}
+      Vous n'avez pas de compte ?{' '}
       <Link href={callbackUrl ? `/signup?callbackUrl=${callbackUrl}` : "/signup"} className="font-medium text-pink-500 hover:text-orange-400">
-        Registrati
+        Inscrivez-vous
       </Link>
     </p>
   ) : (
     <p className="text-sm text-center text-gray-600">
-      Hai già un account?{' '}
+      Vous avez déjà un compte ?{' '}
       <Link href={callbackUrl ? `/signin?callbackUrl=${callbackUrl}` : "/signin"} className="font-medium text-pink-500 hover:text-orange-400">
-        Accedi
+        Connectez-vous
       </Link>
     </p>
   );
@@ -75,29 +74,29 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl">
       <h2 className="text-3xl font-bold text-center text-gray-900">
-        {type === 'signin' ? 'Accedi' : 'Registrati'}
+        {type === 'signin' ? 'Connexion' : 'Inscription'}
       </h2>
       {message && <p className="text-green-500 text-center bg-green-50 p-3 rounded-lg">{message}</p>}
       {error && <p className="text-red-500 text-center bg-red-50 p-3 rounded-lg">{error}</p>}
       <form className="space-y-6" onSubmit={handleSubmit}>
         {type === 'signup' && (
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
-                >
-                Username
-                </label>
-                <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                className="w-full px-4 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                />
-            </div>
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Nom d'utilisateur
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              className="w-full px-4 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
         )}
         <div>
           <label
@@ -122,7 +121,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             htmlFor="password"
             className="block text-sm font-medium text-gray-700"
           >
-            Password
+            Mot de passe
           </label>
           <input
             id="password"
@@ -139,7 +138,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
           type="submit"
           className="w-full px-4 py-3 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-400 rounded-lg hover:from-pink-600 hover:to-orange-500 transition-all duration-300 ease-in-out"
         >
-          {type === 'signin' ? 'Accedi' : 'Crea Account'}
+          {type === 'signin' ? 'Se connecter' : 'Créer un compte'}
         </button>
       </form>
       <div className="pt-4 text-center">

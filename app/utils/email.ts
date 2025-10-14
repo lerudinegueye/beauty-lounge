@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendVerificationEmail(to: string, token: string) {
-  const verificationLink = `http://localhost:3000/api/auth/verify?token=${token}`;
+  const verificationLink = `http://localhost:3000/api/auth/verify?token=${token}`; // Updated port to 3000
   
   try {
     await transporter.sendMail({
@@ -26,6 +26,60 @@ export async function sendVerificationEmail(to: string, token: string) {
     console.log('E-mail de vérification envoyé avec succès à :', to);
   } catch (error) {
     console.error("Erreur l'envoi de l'e-mail de vérification :", error);
+  }
+}
+
+export async function sendContactFormEmail(to: string, adminEmail: string, formData: { firstName: string; lastName: string; email: string; phone: string; message: string; }) {
+  if (!adminEmail) {
+    console.error('Admin email not provided for contact form notification.');
+    return;
+  }
+
+  try {
+    // Send email to the customer
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to,
+      subject: 'Votre message a été reçu par Beauty Lounge',
+      html: `
+        <h1>Merci de nous avoir contactés !</h1>
+        <p>Bonjour ${formData.firstName} ${formData.lastName},</p>
+        <p>Nous avons bien reçu votre message et vous répondrons dans les plus brefs délais.</p>
+        <h2>Récapitulatif de votre message :</h2>
+        <ul>
+          <li><strong>Prénom :</strong> ${formData.firstName}</li>
+          <li><strong>Nom :</strong> ${formData.lastName}</li>
+          <li><strong>Email :</strong> ${formData.email}</li>
+          <li><strong>Téléphone :</strong> ${formData.phone}</li>
+          <li><strong>Message :</strong> ${formData.message}</li>
+        </ul>
+        <p>Merci d'avoir choisi Beauty Lounge !</p>
+      `,
+    });
+    console.log('Contact form confirmation email sent successfully to customer:', to);
+
+    // Send email to the admin
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: adminEmail,
+      subject: `[ADMIN] Nouveau message du formulaire de contact`,
+      html: `
+        <h1>Notification de Nouveau Message (Admin Uniquement)</h1>
+        <p>Un nouveau message a été reçu via le formulaire de contact de votre site.</p>
+        <h2>Détails du message :</h2>
+        <ul>
+          <li><strong>Prénom :</strong> ${formData.firstName}</li>
+          <li><strong>Nom :</strong> ${formData.lastName}</li>
+          <li><strong>Email :</strong> ${formData.email}</li>
+          <li><strong>Téléphone :</strong> ${formData.phone}</li>
+          <li><strong>Message :</strong> ${formData.message}</li>
+        </ul>
+      `,
+    });
+    console.log('Contact form notification email sent successfully to admin:', adminEmail);
+
+  } catch (error) {
+    console.error('Error sending contact form emails:', error);
   }
 }
 

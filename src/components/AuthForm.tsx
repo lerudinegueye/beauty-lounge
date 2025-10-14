@@ -12,6 +12,8 @@ export default function AuthForm({ type }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState(''); // Add this line
 
   const router = useRouter();
 
@@ -24,6 +26,12 @@ export default function AuthForm({ type }: AuthFormProps) {
       case 'password':
         setPassword(value);
         break;
+      case 'username':
+        setUsername(value);
+        break;
+      case 'phone':
+        setPhone(value); // Add this case
+        break;
       default:
         break;
     }
@@ -35,31 +43,40 @@ export default function AuthForm({ type }: AuthFormProps) {
     setSuccess(null);
 
     const url = type === 'sign-up' ? '/api/auth/signup' : '/api/auth/signin';
-
+    const requestBody = type === 'sign-up' 
+      ? { email, password, username }
+      : { email, password };
+  
+    console.log('Sending request to:', url);
+    console.log('Request body:', requestBody);
+  
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(requestBody),
       });
-
+  
       const data = await response.json();
-
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
+  
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        throw new Error(data.message || `Server responded with ${response.status}`);
       }
-
+  
       setSuccess(data.message);
-
+  
       if (type === 'sign-up') {
         router.push('/');
       } else if (type === 'sign-in') {
-        // Handle successful sign-in, e.g., redirect
+        // Handle successful sign-in
       }
-
+  
     } catch (error: any) {
+      console.error('Error during form submission:', error);
       setError(error.message);
     }
   };
@@ -106,6 +123,22 @@ export default function AuthForm({ type }: AuthFormProps) {
           id="password"
           name="password"
           value={password}
+          onChange={handleInputChange}
+        />
+        <label htmlFor="username">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value={username}
+          onChange={handleInputChange}
+        />
+        <label htmlFor="phone">Phone Number</label>
+        <input
+          type="tel"
+          id="phone"
+          name="phone"
+          value={phone}
           onChange={handleInputChange}
         />
         <button

@@ -1,283 +1,251 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
-import type { MenuCard } from '../utils/definitions';
-import { useCart } from '../src/components/CartContext';
-import Modal from '../src/components/Modal';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../src/components/AuthContext';
-import { useRouter } from 'next/navigation';
 
-interface MenuCardsProps {
-  items: MenuCard[];
+interface Service {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string;
 }
 
-const CardItem: React.FC<{ 
-  item: MenuCard; 
-  onBookingClick: (item: MenuCard) => void;
-  onAddToCartClick: (item: MenuCard) => void;
-}> = ({ item, onBookingClick, onAddToCartClick }) => {
+interface Category {
+  name: string;
+  menuItems: Service[];
+}
 
-  const formatPrice = (price: number) => {
-    if (typeof price !== 'number') {
-      return 'Prix indisponible';
-    }
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(price);
+// Timetable Component
+interface TimetableProps {
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  availableTimes: string[];
+  onTimeSelect: (time: string) => void;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const Timetable: React.FC<TimetableProps> = ({ 
+  selectedDate, 
+  onDateChange, 
+  availableTimes, 
+  onTimeSelect, 
+  isLoading, 
+  error 
+}) => {
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    onDateChange(new Date(event.target.value));
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-2 transition-transform duration-300 p-6 w-full max-w-xs">
-      <h3 className="text-xl font-bold mb-2 text-gray-800 text-center">{item.name}</h3>
-      <p className="mb-4 text-gray-600 text-center flex-grow">{item.description}</p>
-      <p className="text-lg font-semibold text-center mb-4">{formatPrice(item.price)}</p>
-      <div className="flex flex-col space-y-2">
-        <button
-          onClick={() => onAddToCartClick(item)}
-          className="bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold py-3 px-6 rounded-lg hover:from-blue-600 hover:to-teal-500 transition-all duration-300 ease-in-out w-full text-center"
+    <div>
+      <div className="mb-4">
+        <label htmlFor="date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+          Scegli una data:
+        </label>
+        <input
+          type="date"
+          id="date-picker"
+          value={selectedDate.toISOString().split('T')[0]}
+          onChange={handleDateChange}
+          min={new Date().toISOString().split('T')[0]}
+          className="w-full p-2 border border-gray-300 rounded-md"
+        />
+      </div>
+      <div>
+        <h3 className="text-lg font-medium text-gray-800 mb-2">Orari disponibili:</h3>
+        {isLoading && <p>Caricamento...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!isLoading && !error && (
+          <div className="grid grid-cols-4 gap-2">
+            {availableTimes.length > 0 ? (
+              availableTimes.map(time => (
+                <button
+                  key={time}
+                  onClick={() => onTimeSelect(time)}
+                  className="bg-pink-500 text-white px-3 py-2 rounded-md hover:bg-pink-600 transition"
+                >
+                  {time}
+                </button>
+              ))
+            ) : (
+              <p>Nessun orario disponibile per questa data.</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Login Modal Component
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full text-center">
+        <h2 className="text-2xl font-bold mb-4">Accesso Richiesto</h2>
+        <p className="mb-6">Devi effettuare l'accesso per poter prenotare un servizio.</p>
+        <a
+          href="/signin"
+          className="w-full bg-pink-500 text-white font-bold py-2 px-4 rounded-full hover:bg-pink-600 transition duration-300 mb-3 inline-block"
         >
-          Ajouter au panier
-        </button>
+          Accedi
+        </a>
         <button
-          onClick={() => onBookingClick(item)}
-          className="bg-gradient-to-r from-pink-500 to-orange-400 text-white font-bold py-3 px-6 rounded-lg hover:from-pink-600 hover:to-orange-500 transition-all duration-300 ease-in-out w-full text-center"
+          onClick={onClose}
+          className="w-full bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-full hover:bg-gray-400 transition duration-300"
         >
-          Réservez
+          Chiudi
         </button>
       </div>
     </div>
   );
 };
 
-export const MenuCards: React.FC<MenuCardsProps> = ({ items }) => {
+const MenuCards: React.FC<{ menu: Category[] }> = ({ menu }) => {
+  const [selectedCategory, setSelectedCategory] = useState(0);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showTimetable, setShowTimetable] = useState(false);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
   const { user } = useAuth();
-  const { addToCart } = useCart();
-  const router = useRouter();
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isAddToCartModalOpen, setIsAddToCartModalOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<MenuCard | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [bookingDate, setBookingDate] = useState('');
-  const [bookingTime, setBookingTime] = useState('');
-  const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{
-    firstName?: string;
-    lastName?: string;
-    bookingDate?: string;
-    bookingTime?: string;
-    phone?: string;
-    email?: string;
-  }>({});
 
-  const handleBookingClick = (card: MenuCard) => {
-    setSelectedCard(card);
-    setIsBookingModalOpen(true);
+  const fetchAvailableTimes = async (serviceId: number, date: Date) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const response = await fetch(`/api/availabilities?serviceId=${serviceId}&date=${formattedDate}&serviceType=menu`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Network response was not ok');
+      }
+      const data = await response.json();
+      setAvailableTimes(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAddToCartClick = (card: MenuCard) => {
-    setSelectedCard(card);
-    setIsAddToCartModalOpen(true);
+  const handleBookClick = (service: Service) => {
+    if (!user) {
+      setIsLoginModalOpen(true);
+    } else {
+      setSelectedService(service);
+      setShowTimetable(true);
+      fetchAvailableTimes(service.id, selectedDate);
+    }
   };
 
-  const handleConfirmAddToCart = () => {
-    if (selectedCard) {
-      addToCart({
-        id: selectedCard.id,
-        title: selectedCard.name,
-        price: selectedCard.price,
-      });
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    if (selectedService) {
+      fetchAvailableTimes(selectedService.id, date);
     }
-    setIsAddToCartModalOpen(false);
-    setSelectedCard(null);
   };
 
-  const handleBookingSubmit = async () => {
-    const newErrors: typeof errors = {};
-    if (!firstName) newErrors.firstName = 'Le prénom est requis.';
-    if (!lastName) newErrors.lastName = 'Le nom est requis.';
-    if (!bookingDate) newErrors.bookingDate = 'La date est requise.';
-    if (!bookingTime) newErrors.bookingTime = "L'heure est requise.";
-    if (!/^\d{9,15}$/.test(phoneNumber)) {
-      newErrors.phone = 'Veuillez entrer un numéro de téléphone valide.';
-    }
-    if (!user && !email) {
-      newErrors.email = "L'email est requis.";
-    } else if (!user && email && !/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "L'adresse email n'est pas valide.";
-    }
+  const handleTimeSelect = async (time: string) => {
+    if (selectedService && user) {
+      // Combine date and time into ISO datetime string
+      const [hours, minutes] = time.split(':');
+      const bookingDateTime = new Date(selectedDate);
+      bookingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      // Split user name into first and last name
+      const nameParts = user.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+      const bookingData = {
+        serviceId: selectedService.id,
+        serviceType: 'menu',
+        startTime: bookingDateTime.toISOString(),
+        firstName: firstName,
+        lastName: lastName,
+        email: user.email,
+        phoneNumber: user.phone || '',
+      };
 
-    if (selectedCard) {
       try {
-        const response = await fetch('/api/send-booking-email', {
+        const response = await fetch('/api/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cardTitle: selectedCard.name,
-            cardPrice: selectedCard.price,
-            customerEmail: user ? user.email : email,
-            phoneNumber,
-            firstName,
-            lastName,
-            bookingDate,
-            bookingTime,
-          }),
+          body: JSON.stringify(bookingData),
         });
 
-        if (!response.ok) throw new Error('La requête de réservation a échoué');
-        
-        console.log('E-mail de réservation envoyé avec succès !');
-        setIsBookingModalOpen(false);
-        setIsSuccessModalOpen(true);
-      } catch (error) {
-        console.error("Erreur lors de l'envoi de la réservation :", error);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Booking failed');
+        }
+
+        setBookingSuccess(true);
+        setShowTimetable(false);
+        setTimeout(() => setBookingSuccess(false), 5000);
+
+      } catch (err: any) {
+        setError(err.message);
       }
     }
   };
 
-  const handleCloseBookingModal = () => {
-    setIsBookingModalOpen(false);
-    setSelectedCard(null);
-    setPhoneNumber('');
-    setFirstName('');
-    setLastName('');
-    setBookingDate('');
-    setBookingTime('');
-    setEmail('');
-    setErrors({});
-  };
-
-  const handleCloseSuccessModal = () => {
-    setIsSuccessModalOpen(false);
-    setSelectedCard(null);
-    setPhoneNumber('');
-    setFirstName('');
-    setLastName('');
-    setBookingDate('');
-    setBookingTime('');
-    setErrors({});
-  };
-
-  const groupedItems = items.reduce((acc, item) => {
-    const category = item.category || 'Autres';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(item);
-    return acc;
-  }, {} as Record<string, MenuCard[]>);
-
-  const categories = Object.keys(groupedItems);
-  const [activeTab, setActiveTab] = useState(categories[0] || '');
-
   return (
-    <div>
-      <div className="flex justify-center mb-8 bg-gray-100 rounded-lg p-1">
-        {categories.map((category) => (
-          <button
-            key={category}
-            className={`px-4 py-2 text-lg font-medium transition-colors duration-300 ease-in-out rounded-md ${
-              activeTab === category
-                ? 'bg-white text-pink-500 shadow'
-                : 'text-gray-600 hover:bg-white/50'
-            }`}
-            onClick={() => setActiveTab(category)}
-          >
-            {category}
-          </button>
-        ))}
+    <div className="container mx-auto p-4">
+      {/* Tabs per le categorie */}
+      <div className="flex justify-center mb-8">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          {menu.map((category, index) => (
+            <button
+              key={category.name}
+              onClick={() => setSelectedCategory(index)}
+              className={`px-6 py-3 rounded-md font-medium transition-all duration-200 ${
+                selectedCategory === index
+                  ? 'bg-pink-500 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div>
-        {Object.entries(groupedItems).map(([category, categoryItems]) => (
-          <div key={category} className={activeTab === category ? 'block' : 'hidden'}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {categoryItems.map((item) => (
-                <CardItem 
-                  key={item.id} 
-                  item={item} 
-                  onBookingClick={handleBookingClick}
-                  onAddToCartClick={handleAddToCartClick} 
-                />
-              ))}
+      {/* Card dei servizi */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {menu[selectedCategory]?.menuItems.map((item) => (
+          <div key={item.id} className="bg-white rounded-lg shadow-lg p-6 flex flex-col justify-between">
+            <div>
+              <h2 className="text-xl font-semibold mb-2 text-gray-800">{item.name}</h2>
+              <p className="text-gray-600 mb-4">{item.description || 'Nessuna descrizione disponibile'}</p>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-bold text-pink-500">{item.price}€</span>
+              <button
+                onClick={() => handleBookClick(item)}
+                className="bg-pink-500 text-white px-4 py-2 rounded-full hover:bg-pink-600 transition duration-300"
+              >
+                Prendre rendez-vous
+              </button>
             </div>
           </div>
         ))}
       </div>
-
-      {isAddToCartModalOpen && selectedCard && (
-        <Modal
-          isOpen={isAddToCartModalOpen}
-          onClose={() => setIsAddToCartModalOpen(false)}
-          onConfirm={handleConfirmAddToCart}
-          title="Confirmation d'ajout"
-          confirmText="Confirmer"
-        >
-          <p>Voulez-vous vraiment ajouter <strong>{selectedCard.name}</strong> au panier ?</p>
-        </Modal>
-      )}
-
-      {isBookingModalOpen && selectedCard && (
-        <Modal
-          isOpen={isBookingModalOpen}
-          onClose={handleCloseBookingModal}
-          onConfirm={handleBookingSubmit}
-          title={`Réserver: ${selectedCard.name}`}
-          confirmText="Confirmer la réservation"
-        >
-          <div className="space-y-4">
-            {!user && (
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-              </div>
-            )}
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">Prénom</label>
-              <input type="text" id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Nom</label>
-              <input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-            </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Numéro de téléphone</label>
-              <input type="tel" id="phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-            </div>
-            <div>
-              <label htmlFor="bookingDate" className="block text-sm font-medium text-gray-700">Date du traitement</label>
-              <input type="date" id="bookingDate" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-              {errors.bookingDate && <p className="text-red-500 text-xs mt-1">{errors.bookingDate}</p>}
-            </div>
-            <div>
-              <label htmlFor="bookingTime" className="block text-sm font-medium text-gray-700">Heure du traitement</label>
-              <input type="time" id="bookingTime" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" required />
-              {errors.bookingTime && <p className="text-red-500 text-xs mt-1">{errors.bookingTime}</p>}
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {isSuccessModalOpen && (
-        <Modal
-          isOpen={isSuccessModalOpen}
-          onClose={handleCloseSuccessModal}
-          onConfirm={handleCloseSuccessModal}
-          title="Réservation réussie !"
-          confirmText="OK"
-        >
-          <p>Votre demande de réservation a été envoyée avec succès. Vous serez contacté(e) sous peu pour la confirmation.</p>
-        </Modal>
-      )}
     </div>
   );
 };
+
+export default MenuCards;

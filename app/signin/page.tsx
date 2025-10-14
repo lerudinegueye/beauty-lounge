@@ -17,7 +17,7 @@ function SignInContent() {
         </Link>
         {verified === 'true' && (
           <p className="text-green-500 bg-green-100 p-4 rounded-md text-center mb-4">
-            Your email has been verified successfully! You can now sign in.
+            Votre e-mail a été vérifié avec succès ! Vous pouvez maintenant vous connecter.
           </p>
         )}
         <AuthForm type="signin" />

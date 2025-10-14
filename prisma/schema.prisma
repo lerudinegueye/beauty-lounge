@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                 @id @default(autoincrement())
+  username            String              @unique(map: "username") @db.VarChar(255)
+  email               String              @unique(map: "email") @db.VarChar(255)
+  password            String              @db.VarChar(255)
+  is_verified         Boolean?            @default(false)
+  is_admin            Boolean?            @default(false) // Added for admin role
+  created_at          DateTime            @default(now()) @db.Timestamp(0)
+  bookings            bookings[]
+  email_verifications EmailVerification[]
+  password_resets     PasswordReset[]
+
+  @@map("users")
+}
+
+model EmailVerification {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  expires_at DateTime @default(dbgenerated("'0000-00-00 00:00:00'")) @db.Timestamp(0)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "email_verifications_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  expires_at DateTime @default(dbgenerated("'0000-00-00 00:00:00'")) @db.Timestamp(0)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "password_resets_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+  @@map("password_resets")
+}
+
+model MenuCategory {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique(map: "name") @db.VarChar(100)
+  menuItems MenuItem[]
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(255)
+  description String?      @db.Text
+  price       Int
+  duration    Int
+  category_id Int
+  created_at  DateTime     @default(now()) @db.Timestamp(0)
+  bookings    bookings[]
+  category    MenuCategory @relation(fields: [category_id], references: [id], onUpdate: Restrict, map: "menu_items_ibfk_1")
+
+  @@index([category_id], map: "category_id")
+  @@map("menu_items")
+}
+
+
+model bookings {
+  id                   Int      @id @default(autoincrement())
+  menu_item_id         Int
+  start_time           DateTime @db.DateTime(0)
+  end_time             DateTime @db.DateTime(0)
+  user_id              Int?
+  customer_first_name  String   @db.VarChar(255)
+  customer_last_name   String   @db.VarChar(255)
+  customer_email       String   @db.VarChar(255)
+  customer_phone       String?  @db.VarChar(255)
+  payment_confirmation String?  @db.VarChar(255)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  menu_items           MenuItem @relation(fields: [menu_item_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_1")
+  users                User?    @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
+
+  @@index([menu_item_id], map: "menu_item_id")
+  @@index([user_id], map: "user_id")
+}
+
+model cryolipolisi {
+  id          Int      @id @default(autoincrement())
+  prezzo      Int
+  numero_zone Int
+  tipo        String?  @db.VarChar(50)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  duration    Int?     @default(60)
+}
+
+model AdminAvailability {
+  id             Int      @id @default(autoincrement())
+  month          Int
+  year           Int
+  availableDays  String   @db.Text // e.g., "Monday,Tuesday,Wednesday"
+  availableHours String   @db.Text // e.g., "09:00-12:00,14:00-18:00"
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+  updated_at     DateTime @updatedAt @db.Timestamp(0)
+
+  @@unique([month, year]) // Ensure only one availability record per month/year
+  @@map("admin_availabilities")
+}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, generateToken } from '../../../utils/auth';
+import { cookies } from 'next/headers'; // Import cookies
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +22,15 @@ export async function POST(req: NextRequest) {
 
     const token = generateToken(user);
 
-    return NextResponse.json({ message: 'Sign-in successful.', token }, { status: 200 });
+    // Set the token as an HTTP-only cookie
+    (await cookies()).set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      maxAge: 60 * 60, // 1 hour
+      path: '/', // Accessible across the entire application
+    });
+
+    return NextResponse.json({ message: 'Sign-in successful.' }, { status: 200 });
 
   } catch (error) {
     console.error('Signin error:', error);

@@ -1,16 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useCart } from '@/src/components/CartContext';
 import Link from 'next/link';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
 
 const PaymentSuccessPage = () => {
-  const { clearCart } = useCart();
+  // const { clearCart } = useCart(); // Removed as cart functionality is gone
 
   useEffect(() => {
-    clearCart();
-  }, [clearCart]);
+    // clearCart() is no longer needed as the cart functionality has been removed.
+  });
 
   return (
     <div className="bg-gray-50 min-h-screen flex items-center justify-center">

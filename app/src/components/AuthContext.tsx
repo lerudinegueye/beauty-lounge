@@ -7,11 +7,12 @@ interface User {
   id: number;
   email: string;
   name: string;
+  isAdmin: boolean; // Added isAdmin property
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (token: string) => void;
+  login: () => void; // No longer takes a token
   logout: () => void;
   isLoading: boolean;
 }
@@ -22,32 +23,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedUser: User = jwtDecode(token);
-        setUser(decodedUser);
-      } catch (error) {
-        console.error("Invalid token, removing it.", error);
-        localStorage.removeItem('token');
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = (token: string) => {
+  // Function to fetch user data from the backend
+  const fetchUser = async () => {
+    setIsLoading(true);
     try {
-      const decodedUser: User = jwtDecode(token);
-      localStorage.setItem('token', token);
-      setUser(decodedUser);
+      const response = await fetch('/api/auth/me'); // A new API route to get current user info
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData.user);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      console.error("Failed to decode token on login:", error);
+      console.error("Error fetching user:", error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  useEffect(() => {
+    fetchUser(); // Fetch user on component mount
+  }, []);
+
+  const login = () => {
+    // After successful login (handled by signin page), re-fetch user data
+    fetchUser();
+  };
+
+  const logout = async () => {
+    // Invalidate the cookie on the server side
+    await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
