@@ -4,21 +4,23 @@ import Link from 'next/link'; // Import Link for navigation
 import ServiceCards from './ServiceCards'; // Import the generic ServiceCards component
 
 interface ServiceCategoryPageProps {
-  params: {
+  params: Promise<{
     category: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: ServiceCategoryPageProps): Promise<Metadata> {
-  const categoryName = decodeURIComponent(params.category);
+  const { category } = await params;
+  const categoryName = decodeURIComponent(category);
   return {
     title: `${categoryName} - Beauty Lounge`,
     description: `Découvrez nos traitements de ${categoryName} et réservez votre séance.`,
   };
 }
 
-const ServiceCategoryPage: React.FC<ServiceCategoryPageProps> = ({ params }) => {
-  const categoryName = decodeURIComponent(params.category);
+const ServiceCategoryPage = async ({ params }: ServiceCategoryPageProps) => {
+  const { category } = await params;
+  const categoryName = decodeURIComponent(category);
 
   return (
     <div className="min-h-screen bg-pink-50 text-gray-800 py-12">

@@ -67,15 +67,21 @@ export default function AdminMenuItemsPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/menu/categories'); // Fetch from the new categories endpoint
+        const response = await fetch('/api/menu/categories');
         if (!response.ok) {
           throw new Error('Failed to fetch categories');
         }
-        const data: MenuCategory[] = await response.json();
-        setCategories(data);
+        const data = await response.json();
+        const list: MenuCategory[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.categories)
+            ? data.categories
+            : [];
+        setCategories(list);
       } catch (error) {
         console.error('Error fetching categories:', error);
         setMessage(localisation[lang].fetchingCategoriesError);
+        setCategories([]);
       }
     };
     fetchCategories();

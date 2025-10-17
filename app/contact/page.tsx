@@ -109,7 +109,7 @@ const ContactPage = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-pink-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-600 transition duration-300"
+            className="w-full px-4 py-3 font-bold text-white bg-slate-600 rounded-lg hover:bg-slate-700 transition-all duration-300 ease-in-out disabled:opacity-50"
             disabled={status === 'Sending...'}
           >
             {status === 'Sending...' ? 'Envoi en cours...' : 'Envoyer'}

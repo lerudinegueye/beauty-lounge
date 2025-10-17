@@ -1,16 +1,17 @@
 'use client'; // Make it a client component
 
-import React, { useState, useEffect } from 'react';
-import ServiceCards from '../menu/[category]/ServiceCards';
-import Timetable from '../src/components/Timetable';
-import BookingForm from '../src/components/BookingForm';
-import LoginModal from '../src/components/LoginModal';
+import React, { useState, useEffect } from 'react'; // Keep React imports
+import MenuCards from '../menu/MenuCards'; // Use MenuCards instead
 import { useAuth } from '../src/components/AuthContext';
-import useBookingStore from '../utils/bookingStore';
+import Link from 'next/link';
+import useBookingStore from '../lib/bookingStore';
+import BookingModals from '../src/components/BookingModals';
 import { Service } from '../utils/definitions';
 
 const CryolipolisiPage = () => {
+  const [cryoServices, setCryoServices] = useState<Service[]>([]);
   const [defaultService, setDefaultService] = useState<Service | null>(null);
+  const [isFetchingDefault, setIsFetchingDefault] = useState(true);
   const {
     selectedService,
     selectedDate,
@@ -37,18 +38,22 @@ const CryolipolisiPage = () => {
   // Fetch a default Cryolipolyse service to use for the "Prendre Rendez-Vous" button
   useEffect(() => {
     const fetchDefaultService = async () => {
+      setIsFetchingDefault(true);
       try {
         const response = await fetch('/api/menu/Cryolipolyse'); // Corrected API endpoint
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
+        
         const data: Service[] = await response.json();
+        setCryoServices(data); // Set all cryo services
+
         if (data.length > 0) {
-          setDefaultService(data[0]); // Use the first service as default
+          setDefaultService(data[0]);
         }
       } catch (err: any) {
         console.error('Failed to fetch default Cryolipolyse service:', err.message);
         // Optionally set an error in a local state if needed for this specific fetch
+      } finally {
+        setIsFetchingDefault(false);
       }
     };
     fetchDefaultService();
@@ -56,7 +61,7 @@ const CryolipolisiPage = () => {
 
   const handleHeroBookClick = () => {
     if (!user) return openLoginModal();
-    if (defaultService) return openTimetable(defaultService);
+    if (defaultService && !isFetchingDefault) return openTimetable(defaultService);
     // Handle case where default service isn't loaded
     console.error('No default service available for booking.');
   };
@@ -73,10 +78,11 @@ const CryolipolisiPage = () => {
             Rimodella il tuo corpo e dì addio al grasso localizzato con la nostra tecnologia di criolipolisi all'avanguardie. Senza dolore né chirurgia.
           </p>
           <button
-            onClick={handleHeroBookClick} // Changed to trigger booking flow
-            className="bg-pink-600 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-700 transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+            onClick={handleHeroBookClick}
+            disabled={isFetchingDefault}
+            className="bg-white text-pink-600 border-2 border-pink-600 font-bold py-3 px-8 rounded-full hover:bg-pink-600 hover:text-white transition-all duration-300 ease-in-out shadow-lg transform hover:scale-105 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Prendre Rendez-Vous
+            {isFetchingDefault ? 'Chargement...' : 'Prendre Rendez-Vous'}
           </button>
         </div>
       </section>
@@ -109,7 +115,11 @@ const CryolipolisiPage = () => {
       <section className="container mx-auto px-6 py-12">
         <h2 className="text-4xl font-bold text-center text-pink-600 mb-8">Tarifs Cryolipolisi</h2>
         <div className="flex justify-center">
-          <ServiceCards categoryName="Cryolipolyse" />
+          {/* Pass the fetched services directly to MenuCards */}
+          <MenuCards menu={[{
+            name: 'Cryolipolyse',
+            menuItems: cryoServices
+          }]} />
         </div>
       </section>
 
@@ -120,58 +130,16 @@ const CryolipolisiPage = () => {
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
             Bénéficiez d’une réduction exclusive en parrainant 2 personnes ou découvrez nos promotions saisonnières !
           </p>
-          <a
-            href="/contact"
-            className="bg-pink-600 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-700 transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+          <Link
+            href="/"
+            className="bg-white text-pink-600 border-2 border-pink-600 font-bold py-3 px-8 rounded-full hover:bg-pink-600 hover:text-white transition-all duration-300 ease-in-out shadow-lg transform hover:scale-105"
           >
             Découvrir les Offres
-          </a>
+          </Link>
         </div>
       </section>
 
-      {isTimetableOpen && selectedService && (
-        <div className="fixed inset-0 bg-pink-50 bg-opacity-90 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full">
-            <h2 className="text-2xl font-bold mb-4">Réserver : {selectedService.name}</h2>
-            <Timetable
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              availableTimes={availableTimes}
-              onTimeSelect={openBookingForm}
-              isLoading={isLoading}
-              error={error}
-            />
-            <button
-              onClick={closeTimetable}
-              className="mt-4 bg-gray-300 text-gray-800 px-4 py-2 rounded-full hover:bg-gray-400 transition duration-300"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isBookingFormOpen && selectedService && (
-        <BookingForm
-          service={selectedService}
-          selectedDate={selectedDate}
-          selectedTime={selectedTime}
-          onSubmit={submitBooking}
-          onCancel={closeBookingForm}
-          isLoading={isLoading}
-        />
-      )}
-
-      {bookingSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-          Réservation effectuée avec succès ! Un e-mail de confirmation a été envoyé.
-        </div>
-      )}
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={closeLoginModal}
-      />
+      <BookingModals />
     </div>
   );
 };

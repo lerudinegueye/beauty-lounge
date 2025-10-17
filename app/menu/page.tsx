@@ -1,11 +1,12 @@
 import MenuCards from './MenuCards';
-import mysql from 'mysql2/promise';
 import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
+import { createDatabaseConnection } from '../lib/database';
 
 // Definiamo i tipi necessari
 interface Service {
   id: number;
+  duration: number;
   name: string;
   description: string | null;
   price: number;
@@ -21,31 +22,26 @@ interface Category {
 async function getMenu(): Promise<Service[]> {
   noStore();
 
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-  });
+  const connection = await createDatabaseConnection();
 
-  const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+  const [rows] = (await connection.execute(
     `SELECT 
         mi.id, 
         mi.name, 
         mi.description, 
         mi.price, 
+        mi.duration,
         mc.name as category 
      FROM menu_items mi
      JOIN menu_categories mc ON mi.category_id = mc.id`
-  );
-
-  await connection.end();
+  )) as [Service[], any];
 
   return rows.map((row: any) => ({
     id: row.id,
     name: row.name,
     description: row.description,
     price: row.price,
+    duration: row.duration,
     category: row.category,
   }));
 }

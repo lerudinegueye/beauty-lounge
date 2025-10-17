@@ -62,7 +62,7 @@ const LocalisationPage = () => {
         <div className="text-center mt-12">
           <Link
             href="/"
-            className="bg-pink-600 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-700 transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+            className="bg-white text-pink-600 border-2 border-pink-600 font-bold py-3 px-8 rounded-full hover:bg-pink-600 hover:text-white transition-all duration-300 ease-in-out shadow-lg transform hover:scale-105"
           >
             Retour à l'accueil
           </Link>

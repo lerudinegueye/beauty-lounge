@@ -60,8 +60,8 @@ const Header = () => {
                   onMouseLeave={() => setIsPrestationsMenuOpen(false)}
                 >
                   <div
-                    className={`text-gray-600 hover:text-pink-500 transition-colors duration-300 flex items-center ${
-                      pathname === '/menu' || link.subLinks.some(subLink => pathname.startsWith(subLink.href)) ? 'font-semibold text-pink-500' : ''
+                    className={`font-semibold text-gray-800 hover:text-pink-500 transition-colors duration-300 flex items-center cursor-pointer ${
+                      pathname === '/menu' || link.subLinks.some(subLink => pathname.startsWith(subLink.href)) ? 'text-pink-500' : ''
                     }`}
                   >
                     {link.label}
@@ -87,8 +87,8 @@ const Header = () => {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-gray-600 hover:text-pink-500 transition-colors duration-300 ${
-                    pathname === link.href ? 'font-semibold text-pink-500' : ''
+                  className={`font-semibold text-gray-800 hover:text-pink-500 transition-colors duration-300 ${
+                    pathname === link.href ? 'text-pink-500' : ''
                   }`}
                 >
                   {link.label}
@@ -126,6 +126,13 @@ const Header = () => {
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
                   {user.isAdmin && (
                     <>
+                      <Link
+                        href="/admin/bookings"
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Gérer les réservations
+                      </Link>
                       <Link
                         href="/admin/availabilities"
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

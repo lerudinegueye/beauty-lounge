@@ -19,7 +19,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Link href="/cryolipolisi"> {/* CORREZIONE: da cryolipolyse a cryolipolisi */}
+        <Link href="/cryolipolisi">
           <div className="bg-gradient-to-br from-pink-400 to-orange-300 p-8 rounded-lg shadow-lg text-white text-center cursor-pointer transform hover:scale-105 transition-transform duration-300">
             <h2 className="text-2xl font-bold">Cryolipolyse</h2>
             <p>Affinez votre silhouette par le froid.</p>

@@ -8,7 +8,33 @@ import { cookies } from 'next/headers'; // Import cookies
 import prisma from '../lib/prisma'; // Import Prisma client
 
 const saltRounds = 10;
-const jwtSecret = process.env.JWT_SECRET || 'your-default-secret';
+
+// Function to generate a secure random string for JWT secret
+function generateSecureSecret(): string {
+  const crypto = require('crypto');
+  return crypto.randomBytes(64).toString('hex');
+}
+
+// Get or generate JWT secret
+let jwtSecret: string;
+
+try {
+  // Try to read from a file first
+  const fs = require('fs');
+  const path = require('path');
+  const secretPath = path.join(process.cwd(), 'jwt-secret.txt');
+  
+  if (fs.existsSync(secretPath)) {
+    jwtSecret = fs.readFileSync(secretPath, 'utf8');
+  } else {
+    // Generate new secret and save it
+    jwtSecret = generateSecureSecret();
+    fs.writeFileSync(secretPath, jwtSecret);
+  }
+} catch (error) {
+  console.warn('Could not persist JWT secret to file, generating temporary one');
+  jwtSecret = generateSecureSecret();
+}
 
 // Define a type for the authenticated user, including isAdmin
 interface AuthenticatedUser {

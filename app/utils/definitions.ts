@@ -2,9 +2,9 @@ import { RowDataPacket } from 'mysql2/promise';
 
 export interface User {
     id: number;
-    username: string;
     email: string;
-    password?: string; // La password è opzionale perché non la vogliamo sempre esporre
+    username: string;
+    password?: string; // Password is optional because we don't always want to expose it
     is_verified?: boolean;
     is_admin?: boolean; // Added for admin role
 }
@@ -54,6 +54,9 @@ export interface Service {
     category?: string;
 }
 
+export type BookingStatus = 'confirmed' | 'pending' | 'cancelled';
+export type PaymentConfirmationStatus = 'confirmed' | 'pending' | 'not_applicable' | null;
+
 export interface Booking {
     id: number;
     menu_item_id: number;
@@ -65,11 +68,16 @@ export interface Booking {
     customer_email: string;
     customer_phone: string | null;
     created_at: string;
-    menu_items?: MenuItem; // Optional, as it's included via Prisma's `include`
-    users?: { // Optional, as it's included via Prisma's `include`
+    status: BookingStatus;
+    payment_confirmation: PaymentConfirmationStatus;
+    payment_method: string | null;
+    payment_status: string | null; // This seems to be legacy, but keeping for type safety
+    notes: string | null;
+    menu_items: MenuItem; // Included via Prisma's `include`
+    users: { // Included via Prisma's `include`
       username: string;
       email: string;
-    };
+    } | null;
 }
 
 export interface MenuCategory {
