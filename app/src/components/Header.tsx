@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
 import { UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
@@ -35,21 +36,24 @@ const Header = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-md h-24">
-      <div className="h-full container mx-auto flex items-center justify-between px-4">
+  <header className="sticky top-0 z-50 bg-white shadow-md h-16 md:h-20 lg:h-24 xl:h-28">
+      <div className="h-full container mx-auto flex items-center justify-between px-2 sm:px-3 md:px-4">
         {/* Col 1: Logo */}
         <div className="flex-shrink-0">
-          <Link href="/" className="h-full flex items-center">
-            <img
+          <Link href="/" className="h-full flex items-center" aria-label="BeautyLounge Accueil">
+            <Image
               src="/logo.jpg"
-              alt="BeautyLounge Logo"
-              className="h-20 object-contain"
+              alt="Beauty Lounge Logo"
+              width={120}
+              height={120}
+              priority
+              className="h-12 md:h-16 lg:h-20 xl:h-24 w-auto object-contain"
             />
           </Link>
         </div>
 
         {/* Col 2: Navigation Links */}
-        <nav className="hidden md:flex items-center space-x-8">
+  <nav className="hidden md:flex items-center space-x-6 xl:space-x-8">
           {navLinks.map((link) => {
             if (link.isDropdown) {
               return (
@@ -100,9 +104,9 @@ const Header = () => {
         </nav>
 
         {/* Col 3: Actions */}
-        <div className="flex-shrink-0 flex items-center space-x-4">
+  <div className="flex-shrink-0 flex items-center space-x-3 md:space-x-4">
           {/* Phone Number */}
-          <a href="tel:+221789907905" className="text-gray-600 hover:text-pink-500 transition-colors duration-300 font-semibold text-lg hidden sm:block">
+          <a href="tel:+221789907905" className="text-gray-600 hover:text-pink-500 transition-colors duration-300 font-semibold text-lg lg:text-xl hidden sm:block">
             +221789907905
           </a>
 
@@ -114,8 +118,8 @@ const Header = () => {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center space-x-2"
               >
-                <UserCircleIcon className="h-8 w-8 text-gray-600" />
-                <span className="font-semibold text-gray-800">{user.name}</span> {/* Increased contrast and boldness */}
+                <UserCircleIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 lg:h-9 lg:w-9 xl:h-10 xl:w-10 text-gray-600" />
+                <span className="hidden sm:inline font-semibold text-gray-800">{user.name}</span>
                 <ChevronDownIcon
                   className={`h-5 w-5 text-gray-600 transition-transform duration-300 ${
                     isUserMenuOpen ? 'rotate-180' : ''

@@ -9,8 +9,14 @@ export async function GET() {
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
     }
 
-    // Return user data, excluding sensitive info like password hash
-    return NextResponse.json({ user: currentUser }, { status: 200 });
+    // Normalize shape for frontend: expose 'name' (from username) and isAdmin
+    const mappedUser = {
+      id: (currentUser as any).id,
+      email: (currentUser as any).email,
+      name: (currentUser as any).name ?? (currentUser as any).username ?? '',
+      isAdmin: (currentUser as any).isAdmin ?? (currentUser as any).is_admin ?? false,
+    };
+    return NextResponse.json({ user: mappedUser }, { status: 200 });
   } catch (error) {
     console.error('Error fetching current user:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

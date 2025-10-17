@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
         // 3. Controlliamo se esiste già una prenotazione che si sovrappone per lo stesso servizio
         const [existingBookings] = await connection.execute<BookingRow[]>(
-            `SELECT id FROM bookings WHERE menu_item_id = ? AND ? < end_time AND ? > start_time`,
+            `SELECT id FROM bookings WHERE menu_item_id = ? AND ? < end_time AND ? > start_time AND (status IS NULL OR status != 'cancelled')`,
             [service.id, bookingTime, bookingEndTime]
         );
 
@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
                 cardPrice: servicePrice,
                 firstName: firstName,
                 bookingDate: bookingDate,
-                bookingTime: bookingTimeFormatted
+                bookingTime: bookingTimeFormatted,
+                bookingId: newBookingId
             });
         } catch (emailError) {
             console.error('Errore invio email al cliente:', emailError);

@@ -62,17 +62,25 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Service not found' }, { status: 404 });
         }
 
-        // 2) Recupera le prenotazioni esistenti nella giornata locale (query in UTC)
-        // Recupera le prenotazioni esistenti nella giornata
+                // 2) Recupera le prenotazioni esistenti nella giornata locale (query in UTC)
                 const [bookingRows]: any = await conn.execute(
-                    'SELECT start_time FROM bookings WHERE menu_item_id = ? AND start_time >= ? AND start_time < ?',
+                    `SELECT start_time, end_time FROM bookings 
+                     WHERE menu_item_id = ? 
+                         AND start_time >= ? AND start_time < ?
+                         AND (status IS NULL OR status != 'cancelled')`,
                     [parseInt(serviceId, 10), startOfDayUtc, endOfDayUtc]
                 );
-        
-        // Mappa gli orari prenotati nel fuso del salone in formato HH:mm
-                        const bookedTimes = bookingRows.map((b: any) =>
-                            formatInTimeZone(new Date(b.start_time), timeZone, 'HH:mm')
-                        );
+
+                // Intervalli prenotati in minuti (nel fuso del salone)
+                const toMin = (hhmm: string) => {
+                    const [hh, mm] = hhmm.split(':').map((n) => parseInt(n, 10));
+                    return hh * 60 + mm;
+                };
+                const bookedIntervals: Array<{ start: number; end: number }> = bookingRows.map((b: any) => {
+                    const startHH = formatInTimeZone(new Date(b.start_time), timeZone, 'HH:mm');
+                    const endHH = formatInTimeZone(new Date(b.end_time), timeZone, 'HH:mm');
+                    return { start: toMin(startHH), end: toMin(endHH) };
+                });
 
     const openingTime = 9;
     const closingTime = 19;
@@ -85,15 +93,21 @@ export async function GET(request: Request) {
                 }
 
                 // 4) Genera gli slot per il giorno selezionato (indipendente dal fuso)
-                        const allPossibleSlots = generateTimeSlots(
+                                                const allPossibleSlots = generateTimeSlots(
                     service.duration,
                     openingTime,
                     closingTime,
                     lunchBreakStart,
                     lunchBreakEnd
                 );
-        
-        const availableSlots = allPossibleSlots.filter(slot => !bookedTimes.includes(slot));
+
+                // Filtra gli slot che non si sovrappongono a prenotazioni esistenti
+                const availableSlots = allPossibleSlots.filter((slot) => {
+                    const [sh, sm] = slot.split(':').map((n) => parseInt(n, 10));
+                    const slotStart = sh * 60 + sm;
+                    const slotEnd = slotStart + service.duration;
+                    return !bookedIntervals.some(({ start, end }) => slotStart < end && slotEnd > start);
+                });
 
                         return NextResponse.json({ allTimes: allPossibleSlots, availableTimes: availableSlots });
 

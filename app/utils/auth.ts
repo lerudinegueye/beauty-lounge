@@ -5,7 +5,7 @@ import { createDatabaseConnection } from '@/app/lib/database';
 import { User, VerificationToken } from './definitions';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { cookies } from 'next/headers'; // Import cookies
-import prisma from '../lib/prisma'; // Import Prisma client
+// Removed Prisma usage to rely on raw SQL for consistency
 
 const saltRounds = 10;
 
@@ -56,44 +56,33 @@ export function generateToken(user: User): string {
 
 // New auth function to get the current authenticated user with admin status
 export async function auth(): Promise<AuthenticatedUser | null> {
-  const cookieStore = await cookies(); // Await cookies()
-  const token = cookieStore.get('token')?.value; // Get token from cookies
-
-  if (!token) {
-    return null;
-  }
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+  if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, jwtSecret) as { id: number; email: string; name: string; isAdmin: boolean; };
-    
-    // Fetch the user from the database to ensure isAdmin is up-to-date
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        is_admin: true,
-      },
-    });
+    const decoded = jwt.verify(token, jwtSecret) as { id: number };
 
-    if (!user) {
-      console.log('Auth: User not found in DB for decoded ID:', decoded.id);
-      return null;
+    let conn: Connection | null = null;
+    try {
+      conn = await createDatabaseConnection();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT id, email, username, is_admin FROM users WHERE id = ? LIMIT 1',
+        [decoded.id]
+      );
+      const dbUser = rows[0] as any;
+      if (!dbUser) return null;
+      return {
+        id: dbUser.id,
+        email: dbUser.email,
+        username: dbUser.username,
+        isAdmin: !!dbUser.is_admin,
+      };
+    } finally {
+      if (conn) await conn.end();
     }
-
-    const isAdminStatus = user.is_admin || false;
-    console.log(`Auth: User ID ${user.id}, email ${user.email}, is_admin from DB: ${user.is_admin}, isAdmin status returned: ${isAdminStatus}`);
-
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      isAdmin: isAdminStatus,
-    };
-
   } catch (error) {
-    console.error('Error verifying token:', error);
+    console.error('Auth error:', error);
     return null;
   }
 }

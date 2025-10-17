@@ -27,10 +27,16 @@ export async function GET(request: Request) {
     const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret) as { id: number };
 
-    const url = new URL(request.url);
-    const sortField = (url.searchParams.get('sortField') || 'start_time');
-    const sortOrder = (url.searchParams.get('sortOrder') || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-    const status = url.searchParams.get('status') || 'all';
+  const url = new URL(request.url);
+  const sortField = (url.searchParams.get('sortField') || 'start_time');
+  const sortOrder = (url.searchParams.get('sortOrder') || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  const status = url.searchParams.get('status') || 'all';
+  const pageParam = parseInt(url.searchParams.get('page') || '1', 10);
+  const pageSizeParam = parseInt(url.searchParams.get('pageSize') || '10', 10);
+
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const pageSize = Number.isFinite(pageSizeParam) && pageSizeParam > 0 && pageSizeParam <= 100 ? pageSizeParam : 10;
+  const offset = (page - 1) * pageSize;
 
     // Only allow specific sort fields to avoid SQL injection
     const allowedSort = new Set(['start_time', 'created_at']);
@@ -62,6 +68,14 @@ export async function GET(request: Request) {
 
       const notesSelect = hasNotes ? 'b.notes' : 'NULL AS notes';
 
+      // Total count for pagination
+      const [countRows]: any = await conn.execute(
+        `SELECT COUNT(*) AS total FROM bookings b ${where}`,
+        params
+      );
+      const total = countRows?.[0]?.total ?? 0;
+
+      // Paged rows
       const [rows]: any = await conn.execute(
         `SELECT 
             b.id, b.menu_item_id, b.start_time, b.end_time, b.user_id,
@@ -73,8 +87,9 @@ export async function GET(request: Request) {
          FROM bookings b
          JOIN menu_items mi ON mi.id = b.menu_item_id
          ${where}
-         ORDER BY b.${sortCol} ${sortOrder}`,
-        params
+         ORDER BY b.${sortCol} ${sortOrder}
+         LIMIT ? OFFSET ?`,
+        [...params, pageSize, offset]
       );
 
       const mapped = rows.map((r: any) => ({
@@ -103,7 +118,8 @@ export async function GET(request: Request) {
       }));
 
       await conn.end();
-      return NextResponse.json(mapped, { status: 200 });
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      return NextResponse.json({ data: mapped, total, page, pageSize, totalPages }, { status: 200 });
     } catch (err) {
       try { await (await createDatabaseConnection()).end(); } catch {}
       throw err;

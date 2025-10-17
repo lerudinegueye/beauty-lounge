@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/src/components/AuthContext'; 
 import { format } from 'date-fns'; 
 import { Menu, Transition } from '@headlessui/react';
-import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
+import { EllipsisVerticalIcon, ArrowPathIcon } from '@heroicons/react/20/solid';
 import EditBookingModal from '@/app/src/components/EditBookingModal';
 import DeleteConfirmationModal from '@/app/src/components/DeleteConfirmationModal';
 import { Booking, BookingStatus } from '@/app/utils/definitions';
@@ -26,6 +26,10 @@ export default function AdminBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   useEffect(() => {
     if (!isAuthLoading && (!user || !user.isAdmin)) {
@@ -40,11 +44,14 @@ export default function AdminBookingsPage() {
           sortField,
           sortOrder,
           status: statusFilter,
+          page: String(page),
+          pageSize: String(pageSize),
         });
         const response = await fetch(`/api/admin/bookings?${params.toString()}`);
         if (!response.ok) throw new Error('Échec de la récupération des réservations');
-        const data = await response.json();
-        setBookings(data);
+        const result = await response.json();
+        setBookings(result.data || []);
+        setTotal(result.total || 0);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Échec du chargement des réservations');
       } finally {
@@ -55,14 +62,21 @@ export default function AdminBookingsPage() {
     if (user?.isAdmin) {
       fetchBookings();
     }
-  }, [user, isAuthLoading, router, sortField, sortOrder, statusFilter]);
+  }, [user, isAuthLoading, router, sortField, sortOrder, statusFilter, page, pageSize]);
 
   const handleUpdateBooking = async (bookingId: number, data: Partial<Booking>) => {
     try {
+      // If admin confirms status, also flag payment_confirmation confirmed for consistency
+      const payload: any = {
+        ...data,
+      };
+      if (data.status === 'confirmed' && !('payment_confirmation' in data)) {
+        payload.payment_confirmation = 'confirmed';
+      }
       const response = await fetch(`/api/admin/bookings/${bookingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -146,7 +160,7 @@ export default function AdminBookingsPage() {
     return null;
   }
 
-  if (bookings.length === 0 && !isLoading) {
+  if (!isLoading && total === 0) {
     return (
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">Gestion des Réservations</h1>
@@ -180,44 +194,70 @@ export default function AdminBookingsPage() {
       {/* En-tête et contrôles de filtre */}
       <div className="flex flex-col items-center gap-6 mb-8">
         <h1 className="text-3xl font-bold text-gray-900 text-center">Gestion des Réservations</h1>
-        <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg w-full sm:w-auto justify-center">
-          <div>
-            <label htmlFor="sort" className="block font-semibold text-gray-800">Trier par</label>
-            <select
-              id="sort"
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value as 'start_time' | 'created_at')}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            >
-              <option value="start_time">Date du rendez-vous</option>
-              <option value="created_at">Date de réservation</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="order" className="block font-semibold text-gray-800">Ordre</label>
-            <select
-              id="order"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            >
-              <option value="asc">Croissant</option>
-              <option value="desc">Décroissant</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="status" className="block font-semibold text-gray-800">Filtrer par statut</label>
-            <select
-              id="status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as BookingStatus | 'all')}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="pending">En attente</option>
-              <option value="confirmed">Confirmé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
+        <div className="w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 items-end gap-5 md:gap-6 p-5 md:p-6 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="w-full">
+              <label htmlFor="sort" className="block font-semibold text-gray-800 mb-1.5">Trier par</label>
+              <select
+                id="sort"
+                value={sortField}
+                onChange={(e) => { setSortField(e.target.value as 'start_time' | 'created_at'); setPage(1); }}
+                className="block w-full min-w-[12rem] rounded-md border-gray-300 shadow-sm h-11 px-3 text-sm md:text-base focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              >
+                <option value="start_time">Date du rendez-vous</option>
+                <option value="created_at">Date de réservation</option>
+              </select>
+            </div>
+            <div className="w-full">
+              <label htmlFor="order" className="block font-semibold text-gray-800 mb-1.5">Ordre</label>
+              <select
+                id="order"
+                value={sortOrder}
+                onChange={(e) => { setSortOrder(e.target.value as 'asc' | 'desc'); setPage(1); }}
+                className="block w-full min-w-[12rem] rounded-md border-gray-300 shadow-sm h-11 px-3 text-sm md:text-base focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              >
+                <option value="asc">Croissant</option>
+                <option value="desc">Décroissant</option>
+              </select>
+            </div>
+            <div className="w-full">
+              <label htmlFor="status" className="block font-semibold text-gray-800 mb-1.5">Filtrer par statut</label>
+              <select
+                id="status"
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value as BookingStatus | 'all'); setPage(1); }}
+                className="block w-full min-w-[12rem] rounded-md border-gray-300 shadow-sm h-11 px-3 text-sm md:text-base focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="pending">En attente</option>
+                <option value="confirmed">Confirmé</option>
+                <option value="cancelled">Annulé</option>
+              </select>
+            </div>
+            <div className="w-full">
+              <label htmlFor="pageSize" className="block font-semibold text-gray-800 mb-1.5">Par page</label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setPage(1); }}
+                className="block w-full min-w-[12rem] rounded-md border-gray-300 shadow-sm h-11 px-3 text-sm md:text-base focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            {/* Reset filters button */}
+            <div className="w-full flex sm:col-span-2 lg:col-span-1">
+              <button
+                type="button"
+                onClick={() => { setSortField('start_time'); setSortOrder('asc'); setStatusFilter('all'); setPageSize(10); setPage(1); }}
+                className="w-full h-11 rounded-md border border-gray-300 bg-white px-3 text-sm md:text-base font-medium text-gray-700 hover:bg-gray-100 shadow-sm flex items-center justify-center gap-2"
+              >
+                <ArrowPathIcon className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
+                <span>Réinitialiser les filtres</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -274,6 +314,7 @@ export default function AdminBookingsPage() {
                     {format(new Date(booking.start_time), 'HH:mm')} - 
                     {format(new Date(booking.end_time), 'HH:mm')}
                   </div>
+                  <div className="text-xs text-gray-400 mt-1">ID de réservation : {booking.id}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
@@ -309,6 +350,21 @@ export default function AdminBookingsPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
+                    {/* Inline status selector */}
+                    <div>
+                      <label htmlFor={`status-${booking.id}`} className="sr-only">Statut</label>
+                      <select
+                        id={`status-${booking.id}`}
+                        value={booking.status}
+                        onChange={(e) => handleUpdateBooking(booking.id, { status: e.target.value as BookingStatus })}
+                        className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50"
+                      >
+                        <option value="pending">En attente</option>
+                        <option value="confirmed">Confirmé</option>
+                        <option value="cancelled">Annulé</option>
+                      </select>
+                    </div>
+
                     {booking.status !== 'pending' && (
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(booking.status)}`}>
                         {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
@@ -387,6 +443,29 @@ export default function AdminBookingsPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination controls */}
+      <div className="mt-6 flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Page {page} sur {Math.max(1, Math.ceil(total / pageSize))} • {total} réservations
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            Précédent
+          </button>
+          <button
+            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+            onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+            disabled={page >= totalPages}
+          >
+            Suivant
+          </button>
+        </div>
       </div>
     </div>
   );}

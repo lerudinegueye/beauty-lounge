@@ -148,19 +148,52 @@ export async function sendAdminNotificationEmail(adminEmail: string, orderDetail
 /**
  * Invia un'email di conferma prenotazione al cliente.
  */
-export async function sendBookingConfirmationEmail(to: string, bookingDetails: { cardTitle: string; cardPrice: number; firstName: string; bookingDate: string; bookingTime: string; }) {
+export async function sendBookingConfirmationEmail(
+  to: string,
+  bookingDetails: { cardTitle: string; cardPrice: number; firstName: string; bookingDate: string; bookingTime: string; bookingId?: number }
+) {
   try {
+    const deposit = 15000;
+    const remainderNumber = Math.max(0, (bookingDetails.cardPrice || 0) - deposit);
+    const remainderLine =
+      remainderNumber > 0
+        ? `<p>Le solde de <strong>${remainderNumber.toLocaleString('fr-FR')} CFA</strong> sera à régler sur place.</p>`
+        : '';
+
+    const wavePhone = process.env.NEXT_PUBLIC_WAVE_PHONE_NUMBER || '221789907905';
+    const waveDeepLink = `wave://send?phone=${wavePhone.replace(/\s/g, '')}&amount=${deposit}&message=${encodeURIComponent(`Acompte Réservation #${bookingDetails.bookingId ?? ''}`)}`;
+    const paymentInstructions = `
+      <h2>Comment payer l'acompte</h2>
+      <p>
+        • Ouvrez l'application Wave et envoyez <strong>${deposit.toLocaleString('fr-FR')} CFA</strong> au numéro
+        <strong style="font-family: monospace;">${wavePhone}</strong>.
+      </p>
+      <p>
+        • Dans la note du transfert, indiquez votre <strong>ID de réservation</strong> :
+        <strong style="font-family: monospace;">${bookingDetails.bookingId ?? ''}</strong>.
+      </p>
+      <p>
+        • Sur mobile, vous pouvez aussi <a href="${waveDeepLink}">cliquer ici pour ouvrir Wave</a> avec le montant prérempli.
+      </p>
+    `;
+
+    const html = `
+      <h1>Merci pour votre réservation !</h1>
+      <p>Bonjour ${bookingDetails.firstName},</p>
+      <p>Nous avons bien reçu votre demande de réservation pour <strong>${bookingDetails.cardTitle}</strong> le <strong>${new Date(bookingDetails.bookingDate).toLocaleDateString('fr-FR')} à ${bookingDetails.bookingTime}</strong>.</p>
+      <p>Pour valider votre rendez-vous, un acompte de <strong>${deposit.toLocaleString('fr-FR')} CFA</strong> est requis.</p>
+      <p>Après réception et vérification de votre acompte, vous recevrez un e-mail de confirmation final.</p>
+      ${remainderLine}
+      ${paymentInstructions}
+      <p>Nous vous remercions pour votre confiance.</p>
+      <p>Merci d'avoir choisi Beauty Lounge !</p>
+    `;
+
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to,
-      subject: 'Votre réservation chez Beauty Lounge est confirmée !',
-      html: `
-        <h1>Merci pour votre réservation !</h1>
-        <p>Bonjour ${bookingDetails.firstName},</p>
-        <p>Votre réservation pour <strong>${bookingDetails.cardTitle}</strong> le <strong>${new Date(bookingDetails.bookingDate).toLocaleDateString('fr-FR')} à ${bookingDetails.bookingTime}</strong> a été confirmée avec succès.</p>
-        <p>Nous vous remercions pour votre confiance.</p>
-        <p>Merci d'avoir choisi Beauty Lounge !</p>
-      `,
+      subject: 'Nous avons bien reçu votre demande de réservation',
+      html,
     });
     console.log('Booking confirmation email sent successfully to:', to);
   } catch (error) {

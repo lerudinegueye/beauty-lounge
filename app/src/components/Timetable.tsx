@@ -93,7 +93,7 @@ const Timetable: React.FC<TimetableProps> = ({ selectedDate, selectedServiceId, 
         : (Array.isArray(availableTimes) ? availableTimes : []);
 
     return (
-        <div className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg shadow">
+        <div className="grid grid-cols-4 gap-1 p-2 bg-white rounded-lg shadow max-h-80 overflow-y-auto md:max-h-96">
             {timesToRender.map(time => {
                 const isAvailable = availableTimes.includes(time);
                 const isSelected = time === selectedTime;
@@ -103,7 +103,7 @@ const Timetable: React.FC<TimetableProps> = ({ selectedDate, selectedServiceId, 
                         key={time}
                         onClick={() => isAvailable && onTimeSelect(time)}
                         disabled={!isAvailable}
-                        className={`p-2 rounded text-center text-sm font-medium transition-colors
+                        className={`py-1 px-2 rounded text-center text-xs font-medium transition-colors
                             ${isAvailable
                                 ? (isSelected
                                     ? 'bg-pink-500 text-white'
