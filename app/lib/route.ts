@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/app/lib/prisma';
 import { getSession } from '@/app/lib/session';
+import { createDatabaseConnection } from '@/app/lib/database';
 
 export async function PATCH(
   request: NextRequest,
@@ -26,22 +26,27 @@ export async function PATCH(
       return NextResponse.json({ message: 'Invalid status value' }, { status: 400 });
     }
 
-    const updatedBooking = await prisma.bookings.update({
-      where: { id: bookingId },
-      data: { status: status },
-    });
-
-    // Here you could also trigger a confirmation email to the user
-
+    const conn = await createDatabaseConnection();
+    await conn.execute(
+      `UPDATE bookings SET status = ? WHERE id = ?`,
+      [status, bookingId]
+    );
+    const [rows]: any = await conn.execute(
+      `SELECT id, menu_item_id, start_time, end_time, user_id, customer_first_name, customer_last_name,
+              customer_email, customer_phone, payment_confirmation, payment_method, payment_status,
+              created_at, status
+       FROM bookings WHERE id = ? LIMIT 1`,
+      [bookingId]
+    );
+    await conn.end();
+    const updatedBooking = rows?.[0] || null;
     return NextResponse.json(updatedBooking, { status: 200 });
 
   } catch (error: any) {
     console.error(`Error updating booking ${bookingId}:`, error);
 
-    // Handle case where booking is not found by Prisma
-    if (error.code === 'P2025') {
-      return NextResponse.json({ message: 'Booking not found' }, { status: 404 });
-    }
+    // If nothing updated, it may be missing
+    // Note: mysql2 doesn't throw Prisma codes; optional: detect affectedRows
 
     return NextResponse.json({ message: 'An error occurred while updating the booking status.' }, { status: 500 });
   }

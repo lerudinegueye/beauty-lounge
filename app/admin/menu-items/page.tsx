@@ -15,9 +15,13 @@ const localisation: Localisation = {
   'en': {
     'addMenuItem': 'Add New Service',
     'serviceName': 'Service Name',
+    'namePlaceholder': 'e.g. Epilation',
     'serviceDescription': 'Service Description',
-    'servicePrice': 'Price',
+    'descriptionPlaceholder': 'e.g. Full body massage, essential oils…',
+    'servicePrice': 'Price (CFA)',
+    'pricePlaceholder': 'e.g. 25000',
     'serviceDuration': 'Duration (minutes)',
+    'durationPlaceholder': 'e.g. 60',
     'serviceCategory': 'Category',
     'selectCategory': 'Select a category',
     'submit': 'Add Service',
@@ -30,9 +34,13 @@ const localisation: Localisation = {
   'fr': {
     'addMenuItem': 'Ajouter une nouvelle prestation',
     'serviceName': 'Nom de la prestation',
+    'namePlaceholder': 'Ex: Épilation',
     'serviceDescription': 'Description de la prestation',
-    'servicePrice': 'Prix',
+    'descriptionPlaceholder': 'Ex: Cryolipolisi 1 zone',
+    'servicePrice': 'Prix (CFA)',
+    'pricePlaceholder': 'Ex: 25000',
     'serviceDuration': 'Durée (minutes)',
+    'durationPlaceholder': 'Ex: 60',
     'serviceCategory': 'Catégorie',
     'selectCategory': 'Sélectionnez une catégorie',
     'submit': 'Ajouter la prestation',
@@ -140,6 +148,7 @@ export default function AdminMenuItemsPage() {
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder={localisation[lang].namePlaceholder}
             className="w-full p-2 border border-gray-300 rounded-md"
             required
           />
@@ -152,6 +161,7 @@ export default function AdminMenuItemsPage() {
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            placeholder={localisation[lang].descriptionPlaceholder}
             className="w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
@@ -164,8 +174,10 @@ export default function AdminMenuItemsPage() {
             id="price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md"
+            placeholder={localisation[lang].pricePlaceholder}
+            className="w-full p-2 border border-gray-300 rounded-md no-spinner"
             step="0.01"
+            inputMode="decimal"
             required
           />
         </div>
@@ -178,6 +190,7 @@ export default function AdminMenuItemsPage() {
             id="duration"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
+            placeholder={localisation[lang].durationPlaceholder}
             className="w-full p-2 border border-gray-300 rounded-md"
             required
           />
@@ -208,6 +221,18 @@ export default function AdminMenuItemsPage() {
           {localisation[lang].submit}
         </button>
       </form>
+      <style jsx>{`
+        /* Hide number input spinners (Chrome, Safari, Edge) */
+        .no-spinner::-webkit-outer-spin-button,
+        .no-spinner::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        /* Hide number input spinners (Firefox) */
+        .no-spinner[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </div>
   );
 }

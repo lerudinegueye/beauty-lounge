@@ -10,7 +10,8 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendVerificationEmail(to: string, token: string) {
-  const verificationLink = `http://localhost:3000/api/auth/verify?token=${token}`; // Updated port to 3000
+  const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const verificationLink = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
   
   try {
     await transporter.sendMail({
@@ -134,7 +135,7 @@ export async function sendAdminNotificationEmail(adminEmail: string, orderDetail
           <li><strong>Date de commande :</strong> ${new Date(orderDetails.order_date).toLocaleString('fr-FR')}</li>
           <li><strong>Montant total :</strong> ${(orderDetails.amount_total).toLocaleString('fr-FR')} ${orderDetails.currency}</li>
         </ul>
-        <p>Connectez-vous à votre tableau de bord Stripe pour plus de détails.</p>
+  <p>Consultez votre tableau de bord d’administration pour plus de détails.</p>
       `,
     });
     console.log('E-mail de notification administrateur envoyé avec succès à :', adminEmail);
@@ -236,7 +237,8 @@ export async function sendBookingAdminNotificationEmail(adminEmail: string, book
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {
-  const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+  const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const resetLink = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
 
   try {
     await transporter.sendMail({

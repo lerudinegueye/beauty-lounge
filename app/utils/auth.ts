@@ -9,31 +9,12 @@ import { cookies } from 'next/headers'; // Import cookies
 
 const saltRounds = 10;
 
-// Function to generate a secure random string for JWT secret
-function generateSecureSecret(): string {
-  const crypto = require('crypto');
-  return crypto.randomBytes(64).toString('hex');
-}
-
-// Get or generate JWT secret
-let jwtSecret: string;
-
-try {
-  // Try to read from a file first
-  const fs = require('fs');
-  const path = require('path');
-  const secretPath = path.join(process.cwd(), 'jwt-secret.txt');
-  
-  if (fs.existsSync(secretPath)) {
-    jwtSecret = fs.readFileSync(secretPath, 'utf8');
-  } else {
-    // Generate new secret and save it
-    jwtSecret = generateSecureSecret();
-    fs.writeFileSync(secretPath, jwtSecret);
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not set. Please configure it in your environment.');
   }
-} catch (error) {
-  console.warn('Could not persist JWT secret to file, generating temporary one');
-  jwtSecret = generateSecureSecret();
+  return secret;
 }
 
 // Define a type for the authenticated user, including isAdmin
@@ -51,7 +32,7 @@ export function generateToken(user: User): string {
     name: user.username,
     isAdmin: (user as any).is_admin || false, // Assuming is_admin might be on the User type
   };
-  return jwt.sign(payload, jwtSecret, { expiresIn: '1h' });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '1h' });
 }
 
 // New auth function to get the current authenticated user with admin status
@@ -61,7 +42,7 @@ export async function auth(): Promise<AuthenticatedUser | null> {
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, jwtSecret) as { id: number };
+    const decoded = jwt.verify(token, getJwtSecret()) as { id: number };
 
     let conn: Connection | null = null;
     try {

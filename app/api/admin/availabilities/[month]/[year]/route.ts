@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../../lib/prisma';
 import { auth } from '../../../../../utils/auth';
+import { createDatabaseConnection } from '../../../../../lib/database';
 
 export async function GET(
   request: Request,
@@ -28,14 +28,14 @@ export async function GET(
 
     console.log(`GET /api/admin/availabilities/${month}/${year} - Parsed month: ${parsedMonth}, parsed year: ${parsedYear}`);
 
-    const availability = await prisma.adminAvailability.findUnique({
-      where: {
-        month_year: {
-          month: parsedMonth,
-          year: parsedYear,
-        },
-      },
-    });
+    const conn = await createDatabaseConnection();
+    const [rows]: any = await conn.execute(
+      `SELECT id, month, year, availableDays, availableHours, created_at, updated_at
+       FROM admin_availabilities WHERE month = ? AND year = ? LIMIT 1`,
+      [parsedMonth, parsedYear]
+    );
+    await conn.end();
+    const availability = rows?.[0];
 
     console.log(`GET /api/admin/availabilities/${month}/${year} - Prisma query result:`, availability);
 
@@ -69,14 +69,12 @@ export async function DELETE(
       return NextResponse.json({ message: 'Month and year are required' }, { status: 400 });
     }
 
-    await prisma.adminAvailability.delete({
-      where: {
-        month_year: {
-          month: parseInt(month),
-          year: parseInt(year),
-        },
-      },
-    });
+    const conn = await createDatabaseConnection();
+    await conn.execute(
+      `DELETE FROM admin_availabilities WHERE month = ? AND year = ?`,
+      [parseInt(month, 10), parseInt(year, 10)]
+    );
+    await conn.end();
 
     return NextResponse.json({ message: 'Availability deleted successfully' }, { status: 200 });
   } catch (error) {
@@ -109,18 +107,20 @@ export async function PUT(
       return NextResponse.json({ message: 'Available days and hours are required' }, { status: 400 });
     }
 
-    const updatedAvailability = await prisma.adminAvailability.update({
-      where: {
-        month_year: {
-          month: parseInt(month),
-          year: parseInt(year),
-        },
-      },
-      data: {
-        availableDays,
-        availableHours,
-      },
-    });
+    const conn = await createDatabaseConnection();
+    await conn.execute(
+      `UPDATE admin_availabilities
+       SET availableDays = ?, availableHours = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE month = ? AND year = ?`,
+      [availableDays, availableHours, parseInt(month, 10), parseInt(year, 10)]
+    );
+    const [rows]: any = await conn.execute(
+      `SELECT id, month, year, availableDays, availableHours, created_at, updated_at
+       FROM admin_availabilities WHERE month = ? AND year = ? LIMIT 1`,
+      [parseInt(month, 10), parseInt(year, 10)]
+    );
+    await conn.end();
+    const updatedAvailability = rows?.[0] || null;
 
     return NextResponse.json({ message: 'Availability updated successfully', availability: updatedAvailability }, { status: 200 });
   } catch (error) {

@@ -76,15 +76,16 @@ const LocalisationPage = () => {
           </div>
 
           <div className="text-center mt-8 sm:mt-10">
-            <p className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Adresse</p>
-            <p className="text-base sm:text-lg text-gray-700">Cité Cheikh Amar, Mamelles Dakar, Senegal</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-800 mt-6 mb-2">Contact</p>
-            <p className="text-base sm:text-lg text-gray-700">
-              Téléphone: <a className="text-pink-600 hover:underline" href="tel:+221789907905">+221789907905</a>
-            </p>
-            <p className="text-base sm:text-lg text-gray-700">
-              Email: <a className="text-pink-600 hover:underline" href="mailto:info@beautylounge.com">info@beautylounge.com</a>
-            </p>
+            <div className="max-w-2xl mx-auto text-left grid grid-cols-[max-content_1fr] gap-x-1 gap-y-2">
+              <span className="text-base sm:text-lg text-gray-800 font-semibold">Adresse:</span>
+              <span className="text-base sm:text-lg text-gray-700">Cité Cheikh Amar, Mamelles Dakar, Senegal</span>
+
+              <span className="text-base sm:text-lg text-gray-800 font-semibold">Téléphone:</span>
+              <a className="text-base sm:text-lg text-pink-600 hover:underline" href="tel:+221789907905">+221789907905</a>
+
+              <span className="text-base sm:text-lg text-gray-800 font-semibold">Email:</span>
+              <a className="text-base sm:text-lg text-pink-600 hover:underline break-all" href="mailto:info@beautylounge.com">info@beautylounge.com</a>
+            </div>
           </div>
         </div>
 

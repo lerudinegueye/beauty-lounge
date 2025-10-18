@@ -21,12 +21,13 @@ export async function POST(req: NextRequest) {
   }));
 
   try {
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+  const origin = req.nextUrl?.origin || process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `http://localhost:3000/payment-success`,
-      cancel_url: `http://localhost:3000/cart`,
+  success_url: `${origin.replace(/\/$/, '')}/payment-success`,
+  cancel_url: `${origin.replace(/\/$/, '')}/cart`,
       metadata: {
         customer_name: user?.name || 'N/A',
       }

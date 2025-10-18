@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
 import { createDatabaseConnection } from '@/app/lib/database';
 
 function getJwtSecret(): string {
-  const secretPath = path.join(process.cwd(), 'jwt-secret.txt');
-  if (fs.existsSync(secretPath)) {
-    return fs.readFileSync(secretPath, 'utf8');
-  }
-  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
-  throw new Error('JWT secret not found');
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not set');
+  return secret;
 }
 
 async function requireAdmin() {

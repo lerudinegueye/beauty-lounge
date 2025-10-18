@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../lib/prisma'; // Removed .ts extension
-import { auth } from '../../../utils/auth'; // Corrected path and removed .ts extension
+import { auth } from '../../../utils/auth';
+import { createDatabaseConnection } from '../../../lib/database';
 
 export async function POST(request: Request) {
   // Implement admin authentication/authorization here
@@ -21,31 +21,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
-    // Upsert (update or insert) the AdminAvailability record
-    const adminAvailability = await prisma.adminAvailability.upsert({
-      where: {
-        month_year: {
-          month: month,
-          year: year,
-        },
-      },
-      update: {
-        availableDays: availableDays,
-        availableHours: availableHours,
-      },
-      create: {
-        month: month,
-        year: year,
-        availableDays: availableDays,
-        availableHours: availableHours,
-      },
-    });
+    const conn = await createDatabaseConnection();
+    try {
+      // Upsert using unique(month,year)
+      await conn.execute(
+        `INSERT INTO admin_availabilities (month, year, availableDays, availableHours)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE availableDays = VALUES(availableDays), availableHours = VALUES(availableHours), updated_at = CURRENT_TIMESTAMP`
+      , [month, year, availableDays, availableHours]);
 
-    console.log('Admin Availabilities POST: Upsert successful, result:', adminAvailability);
-    return NextResponse.json(adminAvailability, { status: 200 });
+      const [rows]: any = await conn.execute(
+        `SELECT id, month, year, availableDays, availableHours, created_at, updated_at
+         FROM admin_availabilities
+         WHERE month = ? AND year = ?
+         LIMIT 1`,
+        [month, year]
+      );
+      await conn.end();
+      const rec = rows?.[0];
+      console.log('Admin Availabilities POST: Upsert successful, result:', rec);
+      return NextResponse.json(rec, { status: 200 });
+    } catch (e: any) {
+      try { await (await createDatabaseConnection()).end(); } catch {}
+      throw e;
+    }
   } catch (error: any) {
     console.error('Error setting admin availability:', error);
-    // Provide more specific error message if available
     return NextResponse.json({ message: `Internal server error: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
@@ -69,15 +70,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Missing month or year' }, { status: 400 });
     }
 
-    const adminAvailability = await prisma.adminAvailability.findUnique({
-      where: {
-        month_year: {
-          month: month,
-          year: year,
-        },
-      },
-    });
+    const conn = await createDatabaseConnection();
+    const [rows]: any = await conn.execute(
+      `SELECT id, month, year, availableDays, availableHours, created_at, updated_at
+       FROM admin_availabilities WHERE month = ? AND year = ? LIMIT 1`,
+      [month, year]
+    );
+    await conn.end();
 
+    const adminAvailability = rows?.[0];
     if (!adminAvailability) {
       return NextResponse.json({ message: 'Availability not found for this month/year' }, { status: 404 });
     }

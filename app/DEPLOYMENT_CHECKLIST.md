@@ -21,23 +21,54 @@ Le variabili da configurare sono:
 
 ### URL dell'Applicazione
 -   `NEXT_PUBLIC_BASE_URL`: L'URL completo del tuo sito live (es. `https://www.beautylounge.com`).
+-   `BASE_URL`: (opzionale) URL usato lato server per link nelle email; se non impostato, verrà usato `NEXT_PUBLIC_BASE_URL`.
 
-### Chiavi API di Stripe
-Per accettare pagamenti reali, devi usare le chiavi API **Live** di Stripe. Le puoi trovare nella tua dashboard di Stripe.
-
--   `STRIPE_SECRET_KEY`: La tua chiave segreta live (inizia con `sk_live_...`).
--   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: La tua chiave pubblicabile live (inizia con `pk_live_...`).
+### Pagamenti
+- Stripe non è più utilizzato. Il flusso di pagamento usa Wave (numero pubblico via `NEXT_PUBLIC_WAVE_PHONE_NUMBER`).
 
 ## 2. Codice e Configurazioni
 
-### API di Checkout (`app/api/checkout/route.ts`)
-Il codice è già configurato correttamente per usare l'URL di origine della richiesta (`req.nextUrl.origin`) per gli URL di successo e di annullamento del pagamento. **Non sono necessarie modifiche in questo file.**
+### Link e URL
+- Email: i link di verifica/password reset ora usano `BASE_URL` o `NEXT_PUBLIC_BASE_URL` (fallback su `http://localhost:3000` in dev). Imposta questi valori in produzione.
+- La rotta Stripe è stata rimossa. Verifica il flusso acconto Wave nell’UI di prenotazione.
 
 ## 3. Configurazione del Servizio di Hosting
 
 1.  **Imposta le Variabili d'Ambiente**: Inserisci tutte le variabili elencate al punto 1 nell'interfaccia del tuo provider di hosting.
 2.  **Comando di Build**: Assicurati che il comando di build sia impostato su `npm run build` (o l'equivalente per il tuo gestore di pacchetti).
 3.  **Dominio**: Collega il tuo dominio personalizzato al progetto sul tuo provider di hosting.
+
+## 4. VPS (Hostinger/OVH) – Guida Rapida
+
+1. Provisioning server:
+	- Ubuntu LTS consigliato, crea un utente non-root con sudo.
+	- Aggiorna il sistema: `sudo apt update && sudo apt upgrade -y`.
+2. Dipendenze:
+	- Installa Node.js LTS (es. tramite nvm) e npm.
+	- Installa MySQL/MariaDB o usa un DB gestito; crea DB e utente con permessi limitati.
+3. Repo & build:
+	- Clona il repo sul server.
+	- Crea un file `.env` con riferimento a `.env.example` e inserisci i valori reali.
+	- `npm ci` poi `npm run build`.
+4. Process manager:
+	- Installa pm2: `npm i -g pm2`.
+	- Avvia: `pm2 start npm --name beauty-lounge -- start` (Next.js production server).
+	- Abilita startup: `pm2 startup` e `pm2 save`.
+5. Reverse proxy (Nginx):
+	- Installa Nginx; configura un server block che punti a `http://127.0.0.1:3000`.
+	- Abilita HTTPS con Certbot (Let’s Encrypt).
+6. Firewall:
+	- Apri porte 80/443; chiudi 3000 pubblica (solo locale).
+7. Log & monitoraggio:
+	- `pm2 logs` per applicazione; `journalctl -u nginx` per Nginx.
+
+Note sicurezza:
+- Imposta `SECRET_COOKIE_PASSWORD` lungo (32+ chars) e `JWT_SECRET` forte (obbligatorio in produzione).
+- Usa account Gmail con App Password o un SMTP affidabile (Mailgun/Sendinblue) invece di password normale.
+- Imposta `SALON_TIMEZONE` (es. `Africa/Dakar`).
+
+DB migrazioni:
+- Esegui SQL iniziali da `app/utils/schema.sql` e le migrazioni in `app/utils/migrations`/`prisma/migrations` se pertinenti.
 
 Seguendo questi passaggi, la transizione da sviluppo a produzione avverrà senza problemi.
 
@@ -64,16 +95,13 @@ Les variables à configurer sont :
 ### URL de l'Application
 -   `NEXT_PUBLIC_BASE_URL`: L'URL complète de votre site en ligne (ex: `https://www.beautylounge.com`).
 
-### Clés API de Stripe
-Pour accepter des paiements réels, vous devez utiliser les clés API **Live** de Stripe. Vous pouvez les trouver dans votre tableau de bord Stripe.
-
--   `STRIPE_SECRET_KEY`: Votre clé secrète live (commence par `sk_live_...`).
--   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Votre clé publiable live (commence par `pk_live_...`).
+### Paiements
+- Stripe n’est plus utilisé. Le flux de paiement utilise Wave (numéro public via `NEXT_PUBLIC_WAVE_PHONE_NUMBER`).
 
 ## 2. Code et Configurations
 
-### API de Paiement (`app/api/checkout/route.ts`)
-Le code est déjà correctement configuré pour utiliser l'URL d'origine de la requête (`req.nextUrl.origin`) pour les URL de succès et d'annulation du paiement. **Aucune modification n'est nécessaire dans ce fichier.**
+### API de Paiement
+La route Stripe a été supprimée. Vérifiez le flux d’acompte Wave dans l’interface de réservation.
 
 ## 3. Configuration du Service d'Hébergement
 
@@ -106,16 +134,13 @@ Le variabili da configurare sono:
 ### URL dell'Applicazione
 -   `NEXT_PUBLIC_BASE_URL`: L'URL completo del tuo sito live (es. `https://www.beautylounge.com`).
 
-### Chiavi API di Stripe
-Per accettare pagamenti reali, devi usare le chiavi API **Live** di Stripe. Le puoi trovare nella tua dashboard di Stripe.
-
--   `STRIPE_SECRET_KEY`: La tua chiave segreta live (inizia con `sk_live_...`).
--   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: La tua chiave pubblicabile live (inizia con `pk_live_...`).
+### Pagamenti
+- Stripe non è più utilizzato. Il flusso di pagamento usa Wave (numero pubblico via `NEXT_PUBLIC_WAVE_PHONE_NUMBER`).
 
 ## 2. Codice e Configurazioni
 
-### API di Checkout (`app/api/checkout/route.ts`)
-Il codice è già configurato correttamente per usare l'URL di origine della richiesta (`req.nextUrl.origin`) per gli URL di successo e di annullamento del pagamento. **Non sono necessarie modifiche in questo file.**
+### API di Checkout
+La rotta Stripe è stata rimossa. Verifica il flusso acconto Wave nell’UI di prenotazione.
 
 ## 3. Configurazione del Servizio di Hosting
 

@@ -1,8 +1,7 @@
 import 'server-only';
 import { createDatabaseConnection } from './database';
 import { MenuCard, MenuRowData, BookingRow, MenuItemRow } from '@/app/utils/definitions';
-import { Connection, RowDataPacket } from 'mysql2/promise'; // Keep for getMenu if not refactored
-import prisma from './prisma'; // Import Prisma client
+import { Connection, RowDataPacket } from 'mysql2/promise';
 
 // Define AvailabilityRow locally as it's no longer imported from definitions
 interface AvailabilityRow {
@@ -48,16 +47,17 @@ export async function getMenu(): Promise<MenuCard[]> {
 
 export async function getAvailabilityData(dateString: string, serviceId: string, serviceType: string) {
     try {
-        // Use Prisma to fetch service duration
-        const service = await prisma.menuItem.findUnique({
-            where: { id: parseInt(serviceId, 10) },
-            select: { duration: true },
-        });
-
-        if (!service || service.duration === null) {
+        // Fetch service duration via SQL
+        const conn0 = await createDatabaseConnection();
+        const [svcRows]: any = await conn0.execute(
+          `SELECT duration FROM menu_items WHERE id = ? LIMIT 1`,
+          [parseInt(serviceId, 10)]
+        );
+        await conn0.end();
+        const serviceDuration: number | null = svcRows?.[0]?.duration ?? null;
+        if (!serviceDuration && serviceDuration !== 0) {
             throw new Error('Service not found or duration not set');
         }
-        const serviceDuration = service.duration;
 
         // --- NEW LOGIC: Fetch availabilities from AdminAvailability ---
         // Use UTC to avoid timezone-related date shifts.
@@ -68,14 +68,13 @@ export async function getAvailabilityData(dateString: string, serviceId: string,
 
         console.log(`[getAvailabilityData] Fetching availability for date: ${dateString}, month: ${month}, year: ${year}`);
 
-        const adminAvailability = await prisma.adminAvailability.findUnique({
-            where: {
-                month_year: {
-                    month: month,
-                    year: year,
-                },
-            },
-        });
+        const conn1 = await createDatabaseConnection();
+        const [admRows]: any = await conn1.execute(
+          `SELECT availableDays, availableHours FROM admin_availabilities WHERE month = ? AND year = ? LIMIT 1`,
+          [month, year]
+        );
+        await conn1.end();
+        const adminAvailability = admRows?.[0] || null;
 
         console.log(`[getAvailabilityData] AdminAvailability found:`, adminAvailability);
 
@@ -85,7 +84,7 @@ export async function getAvailabilityData(dateString: string, serviceId: string,
             // Assuming availableDays stores comma-separated day names like "Monday,Tuesday"
             // Attempt to handle different languages for day names.
             // We'll try to map common French day names to English for comparison.
-            const adminDayNamesRaw = adminAvailability.availableDays.split(',').map(day => day.trim().toLowerCase());
+            const adminDayNamesRaw = (adminAvailability.availableDays as string).split(',').map((day: string) => day.trim().toLowerCase());
             const dayOfWeekEnglish = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(date).toLowerCase();
             const dayOfWeekFrench = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(date); // Get French day name
 
@@ -101,7 +100,7 @@ export async function getAvailabilityData(dateString: string, serviceId: string,
             };
 
             // Normalize admin-entered day names to English
-            const normalizedAdminDayNames = adminDayNamesRaw.map(day => dayNameMap[day.charAt(0).toUpperCase() + day.slice(1)]?.toLowerCase() || day);
+            const normalizedAdminDayNames = adminDayNamesRaw.map((day: string) => dayNameMap[day.charAt(0).toUpperCase() + day.slice(1)]?.toLowerCase() || day);
 
             console.log(`[getAvailabilityData] Checking if day '${dayOfWeekEnglish}' (or '${dayOfWeekFrench}') is in normalized availableDays:`, normalizedAdminDayNames);
 
@@ -171,16 +170,16 @@ export async function getAvailabilityData(dateString: string, serviceId: string,
         const startOfDay = new Date(dateString + 'T00:00:00.000Z');
         const endOfDay = new Date(dateString + 'T23:59:59.999Z');
 
-        const bookingRows = await prisma.bookings.findMany({
-            where: {
-                start_time: {
-                    gte: startOfDay,
-                    lte: endOfDay,
-                },
-            },
-        });
-
-        const bookings = bookingRows.map(b => ({ booking_time: b.start_time, service_duration: (b.end_time.getTime() - b.start_time.getTime()) / 60000 }));
+                const conn2 = await createDatabaseConnection();
+                const [bkRows]: any = await conn2.execute(
+                    `SELECT start_time, end_time FROM bookings WHERE start_time >= ? AND start_time <= ?`,
+                    [startOfDay, endOfDay]
+                );
+                await conn2.end();
+                const bookings = bkRows.map((b: any) => ({
+                    booking_time: b.start_time,
+                    service_duration: (new Date(b.end_time).getTime() - new Date(b.start_time).getTime()) / 60000,
+                }));
         console.log(`[getAvailabilityData] Fetched bookings for ${dateString}:`, bookings);
         console.log(`[getAvailabilityData] Service Duration: ${serviceDuration}`); // Log service duration
 
