@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useRouter } from 'next/navigation'; // For redirection or navigation
 import { useAuth } from '../../src/components/AuthContext'; // Assuming AuthContext provides user info
 import Modal from '../../src/components/Modal'; // Import the Modal component
@@ -19,6 +20,74 @@ const AdminAvailabilitiesPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false); // State for delete confirmation modal
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const frenchShortDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const [excludedDates, setExcludedDates] = useState<string[]>([]); // Exceptions (fermées) per date, format YYYY-MM-DD
+
+  // Helpers for calendar preview (Monday as first day)
+  const getMonthGrid = (y: number, m: number) => {
+    const first = new Date(y, m - 1, 1);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    // JS getDay(): 0=Sun..6=Sat. Convert to Monday-first index (0..6)
+    const startOffset = (first.getDay() + 6) % 7;
+    const cells: Array<number | null> = Array.from({ length: startOffset + daysInMonth }, (_, i) => {
+      const dayNum = i - startOffset + 1;
+      return i < startOffset ? null : dayNum;
+    });
+    return { cells, daysInMonth };
+  };
+
+  const isDayOpen = (y: number, m: number, d: number) => {
+    const jsDay = new Date(y, m - 1, d).getDay(); // 0..6 (Sun..Sat)
+    const mondayIdx = (jsDay + 6) % 7; // 0..6 Mon..Sun
+    const englishName = daysOfWeek[mondayIdx];
+    return availableDays.includes(englishName);
+  };
+
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  const dateKey = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
+  const isExcepted = (y: number, m: number, d: number) => excludedDates.includes(dateKey(y, m, d));
+  const toggleException = (d: number) => {
+    const key = dateKey(year, month, d);
+    setExcludedDates(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
+  };
+
+  // Persist exceptions per month in localStorage (temporary until backend exists)
+  useEffect(() => {
+    const storageKey = `adminAvail_exceptions_${year}_${pad(month)}`;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      setExcludedDates(stored ? JSON.parse(stored) : []);
+    } catch {
+      setExcludedDates([]);
+    }
+    return () => { /* no-op */ };
+  }, [year, month]);
+
+  useEffect(() => {
+    const storageKey = `adminAvail_exceptions_${year}_${pad(month)}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(excludedDates));
+    } catch {}
+  }, [excludedDates, year, month]);
+
+  const navigateMonth = (delta: number) => {
+    let newMonth = month + delta;
+    let newYear = year;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear = year - 1;
+    } else if (newMonth > 12) {
+      newMonth = 1;
+      newYear = year + 1;
+    }
+    setMonth(newMonth);
+    setYear(newYear);
+  };
+
+  const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  });
 
   useEffect(() => {
     if (!isLoading && (!user || !user.isAdmin)) {
@@ -234,6 +303,90 @@ const AdminAvailabilitiesPage: React.FC = () => {
         {message && <p className="mt-4 text-green-600">{message}</p>}
         {error && <p className="mt-4 text-red-600">{error}</p>}
       </form>
+
+      {/* Month preview calendar */}
+      <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            type="button"
+            onClick={() => navigateMonth(-1)}
+            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white p-2 hover:bg-gray-50"
+            aria-label="Mois précédent"
+          >
+            <ChevronLeftIcon className="h-5 w-5 text-gray-700" />
+          </button>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 text-center">
+            {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+          </h2>
+          <button
+            type="button"
+            onClick={() => navigateMonth(1)}
+            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white p-2 hover:bg-gray-50"
+            aria-label="Mois suivant"
+          >
+            <ChevronRightIcon className="h-5 w-5 text-gray-700" />
+          </button>
+        </div>
+        <p className="text-sm text-gray-600 mb-3 text-center">
+          Les jours en rose sont ouverts selon les jours sélectionnés ci-dessus.
+        </p>
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            <div className="grid grid-cols-7 gap-2 mb-2">
+              {frenchShortDays.map((d) => (
+                <div key={d} className="text-center text-xs font-semibold text-gray-600">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {(() => {
+                const { cells } = getMonthGrid(year, month);
+                return cells.map((val, idx) => {
+                  if (val === null) return <div key={`empty-${idx}`} />;
+                  const open = isDayOpen(year, month, val);
+                  const except = isExcepted(year, month, val);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => toggleException(val)}
+                      key={`day-${val}`}
+                      className={`h-16 rounded-md border flex items-center justify-center text-sm transition-colors ${
+                        except
+                          ? 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+                          : open
+                          ? 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                      title={except ? 'Exception: fermé' : open ? 'Ouvert' : 'Fermé'}
+                    >
+                      <span className="font-medium">{val}</span>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-pink-400" /> Ouvert (jours sélectionnés)</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-400" /> Fermé</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-amber-400" /> Exception (fermé ce jour)</span>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          Astuce: clique sur un jour pour le marquer comme exception (non sauvegardé pour l’instant).
+        </div>
+        {excludedDates.length > 0 && (
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setExcludedDates([])}
+              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+            >
+              Réinitialiser les exceptions du mois
+            </button>
+            <span className="text-xs text-gray-500">(sera persisté localement finché la page reste nel browser)</span>
+          </div>
+        )}
+      </div>
 
       {isDeleteModalOpen && (
         <Modal 

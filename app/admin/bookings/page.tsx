@@ -18,8 +18,8 @@ export default function AdminBookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [sortField, setSortField] = useState<'start_time' | 'created_at'>('start_time');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<'start_time' | 'created_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -251,7 +251,7 @@ export default function AdminBookingsPage() {
             <div className="w-full flex sm:col-span-2 lg:col-span-1">
               <button
                 type="button"
-                onClick={() => { setSortField('start_time'); setSortOrder('asc'); setStatusFilter('all'); setPageSize(10); setPage(1); }}
+                onClick={() => { setSortField('created_at'); setSortOrder('desc'); setStatusFilter('all'); setPageSize(10); setPage(1); }}
                 className="w-full h-11 rounded-md border border-gray-300 bg-white px-3 text-sm md:text-base font-medium text-gray-700 hover:bg-gray-100 shadow-sm flex items-center justify-center gap-2"
               >
                 <ArrowPathIcon className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
